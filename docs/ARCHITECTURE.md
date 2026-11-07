@@ -28,16 +28,20 @@ Admin web ──┘        │
                      └─► External signals (weather, AQI; mocked at first)
 ```
 
+The AI service and Neo4j links are added in later roadmap phases; they are not part of the initial build.
+
 ## 3. Proposed claim flow
 
 1. Rider has active weekly coverage and declared shifts.
 2. A disruption occurs. It is detected from external signals or created by an admin as a *disruption event*.
 3. Rider files a claim; the backend validates it and stores it as `pending`.
-4. The backend asks the AI service to verify it: disruption evidence, shift overlap, fraud and graph checks.
+4. The backend verifies it using its own rules: disruption evidence, shift overlap, and duplicate-claim checks.
 5. The claim is marked `approved` or `rejected`.
 6. If approved, the wallet is credited (simulated payout mode by default) and the rider is notified.
 
 Disruption events are evidence only. They never approve claims or trigger payouts directly.
+
+**Initial verification is backend rules only.** The AI service (risk scoring, premium calculation) and Neo4j fraud/graph checks will be integrated later, following the roadmap (Phases 5 and 6). Until then they are not part of the verification path.
 
 ## 4. Design principles
 

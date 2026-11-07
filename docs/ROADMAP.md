@@ -6,7 +6,7 @@ Work ships as small, reviewable PRs: one concern each, docs updated alongside, t
 Larger tasks may split into smaller PRs during implementation.
 
 ## Phase 0: Repository setup
-- **PR #1:** Repository initialization (README, `.gitignore`, `CLAUDE.md`, architecture and roadmap docs). *In Progress.*
+- **PR #1:** Repository initialization (README, `.gitignore`, `CLAUDE.md`, architecture and roadmap docs). *In review.*
 - PR #2: Tooling baseline (editorconfig, CI skeleton, PR template, Firebase emulator config).
 
 ## Phase 1: Backend foundation
@@ -49,6 +49,6 @@ Larger tasks may split into smaller PRs during implementation.
 - PR #25: Deployment configuration and docs.
 
 ## Ground rules
-- No PR scaffolds more than one component.
+- Each PR should contain one focused, reviewable change. A feature may span multiple components when necessary.
 - Reuse of old-repo code is reviewed and intentional, never bulk-copied.
 - Tests never run against production Firebase or databases.
