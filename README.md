@@ -39,4 +39,10 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 ## Development
 
-There is nothing to build or run yet. Setup instructions will be added as each component is introduced.
+There is no application code to build or run yet. Setup instructions will be added as each component is introduced.
+
+### Tooling baseline (In progress)
+
+- **CI:** a GitHub Actions workflow runs repository-hygiene checks only (whitespace, forbidden credential files, JSON validity, relative Markdown links). There are no application build or test jobs yet.
+- **Firebase emulators (config only, not yet tested):** `firebase.json` configures the Auth (`127.0.0.1:9099`) and Firestore (`127.0.0.1:8080`) emulators with the Emulator UI disabled. `.firebaserc` uses the emulator-only demo project `demo-shiftsure`; no real Firebase project is configured. Once Firebase CLI is installed, the intended command is `firebase emulators:start --project demo-shiftsure`. Emulator startup has **not** been tested.
+- **Open Firestore rules:** no `firestore.rules` file exists yet, so the Firestore emulator allows all reads and writes. This is for local development only; security rules are planned for PR #5.
