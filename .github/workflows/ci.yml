@@ -1,0 +1,100 @@
+name: CI
+
+# Repository-hygiene checks only. The repo currently contains docs and config,
+# no application code. Build/test jobs are added in the PR that introduces
+# each component.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repo-hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Whitespace and conflict-marker check (git diff --check)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          empty_tree=$(git hash-object -t tree /dev/null)
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            base="$PR_BASE_SHA"
+          else
+            base="$PUSH_BEFORE_SHA"
+          fi
+          # New branch (all-zero SHA) or unreachable commit (force push):
+          # fall back to the parent commit, or the empty tree for a root commit.
+          if [ -z "$base" ] || ! git cat-file -e "${base}^{commit}" 2>/dev/null; then
+            base=$(git rev-parse --verify -q HEAD^ || echo "$empty_tree")
+          fi
+          echo "Checking diff: $base..HEAD"
+          git diff --check "$base" HEAD
+
+      - name: Forbid committed secrets and credential files
+        run: |
+          set -euo pipefail
+          forbidden='(^|/)\.env(\..*)?$|\.(pem|key|p12|jks|keystore)$|(^|/)key\.properties$|(^|/)serviceAccount[^/]*\.json$|service-account[^/]*\.json$|-firebase-adminsdk-[^/]*\.json$|(^|/)google-services\.json$|(^|/)GoogleService-Info\.plist$|(^|/)firebase_options\.dart$'
+          allowed='(^|/)\.env(\.[^/]*)?\.(example|template)$|(^|/)\.env\.template$'
+          hits=$(git ls-files | grep -E "$forbidden" | grep -vE "$allowed" || true)
+          if [ -n "$hits" ]; then
+            echo "Forbidden files are tracked:"
+            echo "$hits"
+            exit 1
+          fi
+          echo "No forbidden files tracked."
+
+      - name: Validate JSON files
+        run: |
+          set -euo pipefail
+          files=$(git ls-files '*.json' '.firebaserc')
+          for f in $files; do
+            python3 -m json.tool "$f" > /dev/null || { echo "Invalid JSON: $f"; exit 1; }
+            echo "ok: $f"
+          done
+
+      - name: Check relative Markdown links
+        run: |
+          python3 - <<'PY'
+          import os, re, subprocess, sys
+
+          files = subprocess.check_output(["git", "ls-files", "*.md"], text=True).split()
+          link = re.compile(r"\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
+          scheme = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:|^//")
+          bad = []
+          for md in files:
+              text = open(md, encoding="utf-8").read()
+              text = re.sub(r"```.*?```", "", text, flags=re.S)
+              text = re.sub(r"`[^`\n]*`", "", text)
+              for target in link.findall(text):
+                  if target.startswith("#") or scheme.match(target):
+                      continue
+                  path = re.split(r"[#?]", target, maxsplit=1)[0]
+                  if not path:
+                      continue
+                  base = "." if path.startswith("/") else os.path.dirname(md)
+                  resolved = os.path.normpath(os.path.join(base, path.lstrip("/")))
+                  if not os.path.exists(resolved):
+                      bad.append(f"{md}: broken link -> {target}")
+          print(f"Checked {len(files)} Markdown files.")
+          if bad:
+              print("\n".join(bad))
+              sys.exit(1)
+          PY
