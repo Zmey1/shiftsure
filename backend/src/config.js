@@ -44,9 +44,26 @@ export function loadConfig(env = process.env) {
 
   const serviceName = isBlank(env.SERVICE_NAME) ? 'shiftsure-backend' : env.SERVICE_NAME.trim();
 
+  // Explicit project; defaults to the emulator-only demo project outside production.
+  let firebaseProjectId = 'demo-shiftsure';
+  if (!isBlank(env.FIREBASE_PROJECT_ID)) {
+    firebaseProjectId = env.FIREBASE_PROJECT_ID.trim();
+  } else if (nodeEnv === 'production') {
+    errors.push('FIREBASE_PROJECT_ID is required in production');
+  }
+  if (nodeEnv === 'production') {
+    if (firebaseProjectId.startsWith('demo-')) {
+      errors.push('FIREBASE_PROJECT_ID must not be a demo- project in production');
+    }
+    // The Auth emulator accepts unsigned tokens; never allow it in production.
+    if (!isBlank(env.FIREBASE_AUTH_EMULATOR_HOST)) {
+      errors.push('FIREBASE_AUTH_EMULATOR_HOST must not be set in production');
+    }
+  }
+
   if (errors.length > 0) {
     throw new Error(`Invalid configuration:\n- ${errors.join('\n- ')}`);
   }
 
-  return Object.freeze({ nodeEnv, port, serviceName });
+  return Object.freeze({ nodeEnv, port, serviceName, firebaseProjectId });
 }

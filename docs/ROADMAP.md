@@ -1,6 +1,6 @@
 # ShiftSure: Roadmap
 
-> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
+> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
 
 Work ships as small, reviewable PRs: one concern each, docs updated alongside, tests included where code exists.
 Larger tasks may split into smaller PRs during implementation.
@@ -10,8 +10,8 @@ Larger tasks may split into smaller PRs during implementation.
 - **PR #2:** Tooling baseline (editorconfig, CI skeleton, PR template, Firebase emulator config). *Completed (merged, #2).*
 
 ## Phase 1: Backend foundation
-- **PR #3:** Backend scaffold (Express, config loading, health endpoint, test setup). *In progress.*
-- PR #4: Firebase Admin integration and auth middleware (token verification, role checks).
+- **PR #3:** Backend scaffold (Express, config loading, health endpoint, test setup). *Completed (merged, #3).*
+- **PR #4:** Firebase Admin integration and auth middleware (token verification, role checks via custom claims). *In progress.*
 - PR #5: Firestore security rules and emulator-based tests.
 
 ## Phase 2: Rider app foundation

@@ -25,7 +25,7 @@ Disruption events act as evidence for verification. They do not pay out on their
 |---|---|---|
 | Rider app | Flutter (Android, iOS) | Planned |
 | Admin dashboard | Flutter Web | Planned |
-| Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); auth and features **Planned** |
+| Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); token auth and role middleware **In progress** (PR #4, no protected routes yet); features **Planned** |
 | Auth and database | Firebase Auth + Cloud Firestore | Planned |
 | AI service (pricing, risk scoring) | Python + FastAPI | Planned |
 | Fraud / graph analysis | Neo4j | Planned |
@@ -47,9 +47,9 @@ Only the backend scaffold exists so far (see [Backend](#backend-scaffold-impleme
 - **Firebase emulators (config only, not yet tested):** `firebase.json` configures the Auth (`127.0.0.1:9099`) and Firestore (`127.0.0.1:8080`) emulators with the Emulator UI disabled. `.firebaserc` uses the emulator-only demo project `demo-shiftsure`; no real Firebase project is configured. Once Firebase CLI is installed, the intended command is `firebase emulators:start --project demo-shiftsure`. Emulator startup has **not** been tested.
 - **Open Firestore rules:** no `firestore.rules` file exists yet, so the Firestore emulator allows all reads and writes. This is for local development only; security rules are planned for PR #5.
 
-### Backend scaffold (Implemented, PR #3 in review)
+### Backend scaffold (Implemented, PR #3) and auth middleware (In progress, PR #4)
 
-A minimal Node.js + Express app in `backend/` (plain JavaScript, ESM). It currently serves only `GET /health`. Firebase Admin, authentication, Firestore, and all feature routes are **Planned** (PR #4 onward) and do not exist yet.
+A minimal Node.js + Express app in `backend/` (plain JavaScript, ESM). It currently serves only the public `GET /health`. PR #4 adds Firebase Admin initialization and authentication/authorization middleware (**In progress**), but no route uses them yet. Firestore and all feature routes are **Planned** and do not exist yet.
 
 **Prerequisites:** Node.js 26 (Active LTS; see `backend/.nvmrc`) and npm.
 
@@ -71,5 +71,13 @@ npm test               # run tests (node:test)
 | `NODE_ENV` | `development` | `development`, `test`, or `production` |
 | `PORT` | `3000` | HTTP port, integer 0-65535 (`0` picks a free port) |
 | `SERVICE_NAME` | `shiftsure-backend` | Name reported by `GET /health` |
+| `FIREBASE_PROJECT_ID` | `demo-shiftsure` | Project used to verify ID tokens. Required in production, where `demo-*` ids are rejected |
+| `FIREBASE_AUTH_EMULATOR_HOST` | unset | Local Auth emulator, e.g. `127.0.0.1:9099`. Read by the Firebase Admin SDK; startup fails if set in production |
+
+**Authentication and roles (In progress, PR #4).** `authenticate` (`backend/src/middleware/auth.js`) verifies a Firebase ID token from `Authorization: Bearer <token>` and sets `req.user = { uid, role }`; `requireRole('admin')` etc. restricts a route. Failures return `401 {"error":"unauthenticated"}` or `403 {"error":"forbidden"}` with no further detail.
+
+- **Roles come only from Firebase custom claims.** The verified token's `role` claim must be `rider` or `admin`; anything else means no role (403 on role-guarded routes). Nothing the client sends (headers, body, query) is used for authorization. The old repo read the role from a Firestore `workers` document on every request and defaulted to `rider`; that is intentionally not carried over.
+- **Implications:** claims are refreshed only when the client's ID token refreshes (up to about an hour), so role changes lag. Immediate revocation needs `verifyIdToken(token, true)` (checks revocation) *in addition to* `revokeRefreshTokens`; `revokeRefreshTokens` alone does not invalidate existing ID tokens until they expire. Claims must be set by trusted server code or scripts via the Admin SDK (`setCustomUserClaims`); that registration/bootstrap step is **Planned** for later PRs, as is Firestore-rule use of `request.auth.token.role`.
+- **Not yet verified against the emulator:** tests inject a fake verifier. No credentials are used; only the project id is needed to verify tokens.
 
 **Tests** are hermetic: they need no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`.

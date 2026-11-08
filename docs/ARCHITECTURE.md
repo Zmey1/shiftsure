@@ -15,7 +15,7 @@
 |---|---|---|---|
 | Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Planned |
 | Admin dashboard | Flutter Web | Monitor zones, claims, pools, loss ratio; simulate disruptions | Planned |
-| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); auth and business logic **Planned** |
+| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); token auth and role middleware **In progress** (PR #4; not yet applied to any route); business logic **Planned** |
 | Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Planned |
 | AI service | Python + FastAPI | Risk scoring, premium calculation, verification inputs | Planned |
 | Fraud / graph layer | Neo4j | Detect coordinated abuse and claim-event mismatches | Planned |
@@ -46,7 +46,7 @@ Disruption events are evidence only. They never approve claims or trigger payout
 ## 4. Design principles
 
 - **Backend is the single integration point.** Clients never talk to the AI service or Neo4j directly.
-- **Server-side authorization.** Roles (rider, admin) are checked on the backend using verified Firebase tokens.
+- **Server-side authorization.** Roles (rider, admin) are checked on the backend using verified Firebase ID tokens. **Decision (PR #4, in progress):** the role is read only from the token's signed `role` custom claim, not from a Firestore document. This avoids a database read per request and keeps authorization independent of Firestore rules; a missing or unknown claim means no role (denied). Consequences: claims change only on token refresh; they must be set server-side with the Admin SDK (registration and admin bootstrap are **Planned**); Firestore rules can read `request.auth.token.role`; any `role` field in Firestore is not authoritative.
 - **Service-to-service auth.** The backend authenticates to the AI service with a shared secret or equivalent.
 - **Idempotent payouts.** A claim can be paid at most once.
 - **Fail safe.** If fraud or verification services are unavailable, claims stay pending rather than auto-approving.
