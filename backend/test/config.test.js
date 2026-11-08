@@ -10,12 +10,18 @@ test('applies defaults for an empty env', () => {
     nodeEnv: 'development',
     port: 3000,
     serviceName: 'shiftsure-backend',
+    firebaseProjectId: 'demo-shiftsure',
   });
 });
 
 test('parses valid overrides', () => {
   const config = loadConfig({ NODE_ENV: 'test', PORT: '0', SERVICE_NAME: 'svc' });
-  assert.deepEqual(config, { nodeEnv: 'test', port: 0, serviceName: 'svc' });
+  assert.deepEqual(config, {
+    nodeEnv: 'test',
+    port: 0,
+    serviceName: 'svc',
+    firebaseProjectId: 'demo-shiftsure',
+  });
 });
 
 test('treats blank values as unset', () => {
@@ -43,6 +49,34 @@ test('reports every problem at once', () => {
   assert.throws(
     () => loadConfig({ NODE_ENV: 'x', PORT: 'y' }),
     (err) => /NODE_ENV/.test(err.message) && /PORT/.test(err.message),
+  );
+});
+
+test('FIREBASE_PROJECT_ID overrides the demo default', () => {
+  assert.equal(loadConfig({ FIREBASE_PROJECT_ID: ' my-proj ' }).firebaseProjectId, 'my-proj');
+});
+
+test('production requires a real FIREBASE_PROJECT_ID', () => {
+  assert.throws(() => loadConfig({ NODE_ENV: 'production' }), /FIREBASE_PROJECT_ID is required/);
+  assert.throws(
+    () => loadConfig({ NODE_ENV: 'production', FIREBASE_PROJECT_ID: 'demo-shiftsure' }),
+    /must not be a demo-/,
+  );
+  assert.equal(
+    loadConfig({ NODE_ENV: 'production', FIREBASE_PROJECT_ID: 'real-proj' }).firebaseProjectId,
+    'real-proj',
+  );
+});
+
+test('production rejects FIREBASE_AUTH_EMULATOR_HOST', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        NODE_ENV: 'production',
+        FIREBASE_PROJECT_ID: 'real-proj',
+        FIREBASE_AUTH_EMULATOR_HOST: '127.0.0.1:9099',
+      }),
+    /FIREBASE_AUTH_EMULATOR_HOST must not be set/,
   );
 });
 
