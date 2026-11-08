@@ -15,7 +15,7 @@
 |---|---|---|---|
 | Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Planned |
 | Admin dashboard | Flutter Web | Monitor zones, claims, pools, loss ratio; simulate disruptions | Planned |
-| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Planned |
+| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); auth and business logic **Planned** |
 | Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Planned |
 | AI service | Python + FastAPI | Risk scoring, premium calculation, verification inputs | Planned |
 | Fraud / graph layer | Neo4j | Detect coordinated abuse and claim-event mismatches | Planned |
