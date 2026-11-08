@@ -10,10 +10,16 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:rules": "firebase emulators:exec --config ../firebase.json --project demo-shiftsure --only firestore \"node --test test-rules/*.test.js\""
   },
   "dependencies": {
     "express": "^5.3.0",
     "firebase-admin": "^14.5.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase": "^12.19.0",
+    "firebase-tools": "^15.35.0"
   }
 }

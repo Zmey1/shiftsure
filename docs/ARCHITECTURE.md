@@ -15,8 +15,8 @@
 |---|---|---|---|
 | Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Planned |
 | Admin dashboard | Flutter Web | Monitor zones, claims, pools, loss ratio; simulate disruptions | Planned |
-| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); token auth and role middleware **In progress** (PR #4; not yet applied to any route); business logic **Planned** |
-| Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Planned |
+| Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); token auth and role middleware **Implemented** (PR #4; not yet applied to any route); business logic **Planned** |
+| Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Deny-all Firestore client rules **In progress** (PR #5); data models **Planned** |
 | AI service | Python + FastAPI | Risk scoring, premium calculation, verification inputs | Planned |
 | Fraud / graph layer | Neo4j | Detect coordinated abuse and claim-event mismatches | Planned |
 
@@ -46,7 +46,7 @@ Disruption events are evidence only. They never approve claims or trigger payout
 ## 4. Design principles
 
 - **Backend is the single integration point.** Clients never talk to the AI service or Neo4j directly.
-- **Server-side authorization.** Roles (rider, admin) are checked on the backend using verified Firebase ID tokens. **Decision (PR #4, in progress):** the role is read only from the token's signed `role` custom claim, not from a Firestore document. This avoids a database read per request and keeps authorization independent of Firestore rules; a missing or unknown claim means no role (denied). Consequences: claims change only on token refresh; they must be set server-side with the Admin SDK (registration and admin bootstrap are **Planned**); Firestore rules can read `request.auth.token.role`; any `role` field in Firestore is not authoritative.
+- **Server-side authorization.** Roles (rider, admin) are checked on the backend using verified Firebase ID tokens. **Decision (PR #4, implemented):** the role is read only from the token's signed `role` custom claim, not from a Firestore document. This avoids a database read per request and keeps authorization independent of Firestore rules; a missing or unknown claim means no role (denied). Consequences: claims change only on token refresh; they must be set server-side with the Admin SDK (registration and admin bootstrap are **Planned**); Firestore rules can read `request.auth.token.role`; any `role` field in Firestore is not authoritative.
 - **Service-to-service auth.** The backend authenticates to the AI service with a shared secret or equivalent.
 - **Idempotent payouts.** A claim can be paid at most once.
 - **Fail safe.** If fraud or verification services are unavailable, claims stay pending rather than auto-approving.
@@ -54,7 +54,9 @@ Disruption events are evidence only. They never approve claims or trigger payout
 
 ## 5. Proposed data model (sketch)
 
-Firestore collections, subject to change: `workers`, `policies`, `shifts`, `claims`, `disruption_events`, `wallets`/transactions, `zones`. Schemas, indexes, and security rules will be designed in their own PRs.
+Firestore collections, subject to change: `workers`, `policies`, `shifts`, `claims`, `disruption_events`, `wallets`/transactions, `zones`. Schemas and indexes will be designed in their own PRs.
+
+**Firestore client access (PR #5, in progress).** `firestore.rules` denies all client SDK reads and writes (unauthenticated, rider, and admin alike). Clients reach data only through the backend, which uses the Firebase Admin SDK; the Admin SDK bypasses security rules, so backend authorization is the only gate for application data. Collection-specific rules are deliberately deferred until real data models and access requirements exist. Emulator-based tests (`backend/test-rules/`) verify the denial.
 
 ## 6. Environments and testing
 
