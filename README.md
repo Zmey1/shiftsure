@@ -25,7 +25,7 @@ Disruption events act as evidence for verification. They do not pay out on their
 |---|---|---|
 | Rider app | Flutter (Android, iOS) | Planned |
 | Admin dashboard | Flutter Web | Planned |
-| Backend API | Node.js + Express | Planned |
+| Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); auth and features **Planned** |
 | Auth and database | Firebase Auth + Cloud Firestore | Planned |
 | AI service (pricing, risk scoring) | Python + FastAPI | Planned |
 | Fraud / graph analysis | Neo4j | Planned |
@@ -39,10 +39,37 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 ## Development
 
-There is no application code to build or run yet. Setup instructions will be added as each component is introduced.
+Only the backend scaffold exists so far (see [Backend](#backend-scaffold-implemented-pr-3-in-review)). Setup instructions for other components will be added as each is introduced.
 
-### Tooling baseline (In progress)
+### Tooling baseline (Implemented)
 
-- **CI:** a GitHub Actions workflow runs repository-hygiene checks only (whitespace, forbidden credential files, JSON validity, relative Markdown links). There are no application build or test jobs yet.
+- **CI:** a GitHub Actions workflow runs repository-hygiene checks (whitespace, forbidden credential files, JSON validity, relative Markdown links) and, since PR #3, the backend tests (`backend-tests` job). No other component has build or test jobs yet.
 - **Firebase emulators (config only, not yet tested):** `firebase.json` configures the Auth (`127.0.0.1:9099`) and Firestore (`127.0.0.1:8080`) emulators with the Emulator UI disabled. `.firebaserc` uses the emulator-only demo project `demo-shiftsure`; no real Firebase project is configured. Once Firebase CLI is installed, the intended command is `firebase emulators:start --project demo-shiftsure`. Emulator startup has **not** been tested.
 - **Open Firestore rules:** no `firestore.rules` file exists yet, so the Firestore emulator allows all reads and writes. This is for local development only; security rules are planned for PR #5.
+
+### Backend scaffold (Implemented, PR #3 in review)
+
+A minimal Node.js + Express app in `backend/` (plain JavaScript, ESM). It currently serves only `GET /health`. Firebase Admin, authentication, Firestore, and all feature routes are **Planned** (PR #4 onward) and do not exist yet.
+
+**Prerequisites:** Node.js 26 (Active LTS; see `backend/.nvmrc`) and npm.
+
+```bash
+cd backend
+npm ci                 # install exact locked dependencies
+cp .env.example .env   # optional; defaults work without it
+npm run dev            # start with auto-restart on file changes (node --watch)
+npm start              # start without watch
+curl localhost:3000/health
+# {"status":"ok","service":"shiftsure-backend","uptimeSeconds":3}
+npm test               # run tests (node:test)
+```
+
+**Configuration.** `backend/.env` is optional and is always read from the `backend/` directory regardless of where the command is run. Variables already set in the shell take precedence over the file. Invalid values stop startup with a message listing every problem.
+
+| Variable | Default | Description |
+|---|---|---|
+| `NODE_ENV` | `development` | `development`, `test`, or `production` |
+| `PORT` | `3000` | HTTP port, integer 0-65535 (`0` picks a free port) |
+| `SERVICE_NAME` | `shiftsure-backend` | Name reported by `GET /health` |
+
+**Tests** are hermetic: they need no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`.
