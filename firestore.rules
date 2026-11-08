@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Deny-all for every client SDK request (unauthenticated, rider, admin alike).
+// The Express backend is the only data path; it uses the Firebase Admin SDK,
+// which bypasses these rules. Add collection rules only with real data models.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

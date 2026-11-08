@@ -1,7 +1,9 @@
 name: CI
 
 # repo-hygiene: repository-wide checks (whitespace, secrets, JSON, Markdown links).
-# backend-tests: installs and tests backend/. Build/test jobs for other components
+# backend-tests: installs and tests backend/.
+# firestore-rules-tests: Firestore security-rules tests on the local emulator (demo project).
+# Build/test jobs for other components
 # are added in the PR that introduces each component.
 
 on:
@@ -123,3 +125,34 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+  firestore-rules-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js (version from backend/.nvmrc)
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: backend/.nvmrc
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Set up Java 21 (required by the Firestore emulator)
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Firestore rules tests (local emulator, demo project)
+        run: npm run test:rules
