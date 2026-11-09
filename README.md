@@ -23,10 +23,10 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 | Area | Planned technology | Status |
 |---|---|---|
-| Rider app | Flutter (Android, iOS) | Planned |
+| Rider app | Flutter (Android, iOS) | Scaffold **In progress** (PR #6); rider features **Planned** |
 | Admin dashboard | Flutter Web | Planned |
 | Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); token auth and role middleware **Implemented** (PR #4, no protected routes yet); features **Planned** |
-| Auth and database | Firebase Auth + Cloud Firestore | Deny-all Firestore client rules and emulator tests **In progress** (PR #5); data models **Planned** |
+| Auth and database | Firebase Auth + Cloud Firestore | Deny-all Firestore client rules and emulator tests **Implemented** (PR #5); data models **Planned** |
 | AI service (pricing, risk scoring) | Python + FastAPI | Planned |
 | Fraud / graph analysis | Neo4j | Planned |
 
@@ -39,13 +39,13 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 ## Development
 
-Only the backend scaffold exists so far (see [Backend](#backend-scaffold-implemented-pr-3-in-review)). Setup instructions for other components will be added as each is introduced.
+Only the backend and the rider app scaffold exist so far (see [Backend](#backend-scaffold-implemented-pr-3-and-auth-middleware-implemented-pr-4) and [Rider app](#rider-app-scaffold-in-progress-pr-6)). Setup instructions for other components will be added as each is introduced.
 
 ### Tooling baseline (Implemented)
 
-- **CI:** a GitHub Actions workflow runs repository-hygiene checks (whitespace, forbidden credential files, JSON validity, relative Markdown links) and, since PR #3, the backend tests (`backend-tests` job). PR #5 adds the `firestore-rules-tests` job (Firestore emulator, Java 21). No other component has build or test jobs yet.
+- **CI:** a GitHub Actions workflow runs repository-hygiene checks (whitespace, forbidden credential files, JSON validity, relative Markdown links) and, since PR #3, the backend tests (`backend-tests` job). PR #5 added the `firestore-rules-tests` job (Firestore emulator, Java 21). PR #6 adds the `mobile-tests` job (format check, `flutter analyze`, `flutter test`, Flutter 3.32.4). No other component has build or test jobs yet.
 - **Firebase emulators (config only, not yet tested):** `firebase.json` configures the Auth (`127.0.0.1:9099`) and Firestore (`127.0.0.1:8080`) emulators with the Emulator UI disabled. `.firebaserc` uses the emulator-only demo project `demo-shiftsure`; no real Firebase project is configured. Once Firebase CLI is installed, the intended command is `firebase emulators:start --project demo-shiftsure`. Emulator startup has **not** been tested.
-- **Firestore rules (In progress, PR #5):** `firestore.rules` denies all client SDK access; `firebase.json` loads it. The backend (Admin SDK, which bypasses rules) is the only intended data path. No collection-specific rules exist yet. Emulator tests live in `backend/test-rules/` and run with `cd backend && npm run test:rules` (needs Java 21+; uses demo project `demo-shiftsure`, never a real project). They are separate from the hermetic `npm test`.
+- **Firestore rules (Implemented, PR #5):** `firestore.rules` denies all client SDK access; `firebase.json` loads it. The backend (Admin SDK, which bypasses rules) is the only intended data path. No collection-specific rules exist yet. Emulator tests live in `backend/test-rules/` and run with `cd backend && npm run test:rules` (needs Java 21+; uses demo project `demo-shiftsure`, never a real project). They are separate from the hermetic `npm test`.
 
 ### Backend scaffold (Implemented, PR #3) and auth middleware (Implemented, PR #4)
 
@@ -81,3 +81,27 @@ npm test               # run tests (node:test)
 - **Not yet verified against the emulator:** tests inject a fake verifier. No credentials are used; only the project id is needed to verify tokens.
 
 **Tests** are hermetic: they need no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`.
+
+### Rider app scaffold (In progress, PR #6)
+
+A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders, and there is no sign-in, Firebase, or business data yet. The one working screen element is a **development diagnostic** card on Home that calls `GET /health` once on load (and on Retry); it is not a rider feature.
+
+**Prerequisites:** Flutter 3.32.4 (stable; Dart 3.8.1) with the Android SDK for Android. iOS builds need macOS and Xcode and have **not** been verified.
+
+```bash
+cd mobile
+flutter pub get
+flutter analyze && flutter test        # hermetic: no backend or network needed
+cp config.example.json config.local.json   # optional; git-ignored
+flutter run --dart-define-from-file=config.local.json
+```
+
+**Backend URL.** `API_BASE_URL` is a build-time setting (default `http://localhost:3000`). Start the backend with `cd backend && npm run dev` first.
+
+| Target | `API_BASE_URL` |
+|---|---|
+| iOS simulator | `http://localhost:3000` (default) |
+| Android emulator | `http://10.0.2.2:3000`, or keep the default and run `adb reverse tcp:3000 tcp:3000` |
+| Physical device | `http://<your-computer-LAN-IP>:3000` (the backend must listen on that interface) |
+
+Plain HTTP is allowed only in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`); release builds are HTTPS-only. `ApiClient` (`mobile/lib/api/api_client.dart`) can attach a Firebase ID token through an optional `tokenProvider`; nothing supplies one until authentication is built (PR #7).

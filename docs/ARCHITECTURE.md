@@ -1,6 +1,6 @@
 # ShiftSure: Proposed Architecture
 
-> **Status: proposal only.** Nothing described here is implemented. This document is a design to be reviewed and refined as components are built. Every component below is **Planned**.
+> **Status: proposal, partly built.** This is a design to be reviewed and refined as components are built. The status column below says what exists; anything not marked **Implemented** or **In progress** is **Planned**.
 
 ## 1. Goals
 
@@ -13,10 +13,10 @@
 
 | Component | Technology | Responsibility | Status |
 |---|---|---|---|
-| Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Planned |
+| Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Scaffold **In progress** (PR #6: navigation, theme, API client, placeholder screens); all rider features **Planned** |
 | Admin dashboard | Flutter Web | Monitor zones, claims, pools, loss ratio; simulate disruptions | Planned |
 | Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); token auth and role middleware **Implemented** (PR #4; not yet applied to any route); business logic **Planned** |
-| Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Deny-all Firestore client rules **In progress** (PR #5); data models **Planned** |
+| Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Deny-all Firestore client rules **Implemented** (PR #5); data models **Planned** |
 | AI service | Python + FastAPI | Risk scoring, premium calculation, verification inputs | Planned |
 | Fraud / graph layer | Neo4j | Detect coordinated abuse and claim-event mismatches | Planned |
 
@@ -56,7 +56,7 @@ Disruption events are evidence only. They never approve claims or trigger payout
 
 Firestore collections, subject to change: `workers`, `policies`, `shifts`, `claims`, `disruption_events`, `wallets`/transactions, `zones`. Schemas and indexes will be designed in their own PRs.
 
-**Firestore client access (PR #5, in progress).** `firestore.rules` denies all client SDK reads and writes (unauthenticated, rider, and admin alike). Clients reach data only through the backend, which uses the Firebase Admin SDK; the Admin SDK bypasses security rules, so backend authorization is the only gate for application data. Collection-specific rules are deliberately deferred until real data models and access requirements exist. Emulator-based tests (`backend/test-rules/`) verify the denial.
+**Firestore client access (PR #5, implemented).** `firestore.rules` denies all client SDK reads and writes (unauthenticated, rider, and admin alike). Clients reach data only through the backend, which uses the Firebase Admin SDK; the Admin SDK bypasses security rules, so backend authorization is the only gate for application data. Collection-specific rules are deliberately deferred until real data models and access requirements exist. Emulator-based tests (`backend/test-rules/`) verify the denial.
 
 ## 6. Environments and testing
 

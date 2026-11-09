@@ -96,3 +96,6 @@ test-results.txt
 *~
 .DS_Store
 Thumbs.db
+
+# ---------- Mobile local config ----------
+mobile/config.local.json
