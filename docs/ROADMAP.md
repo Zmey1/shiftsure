@@ -1,6 +1,6 @@
 # ShiftSure: Roadmap
 
-> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **Completed** (merged). The mobile toolchain maintenance PR (GitHub #8, unnumbered below) is **Completed** (merged). This docs PR (GitHub #9) is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
+> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **Completed** (merged). PR #8 is **Completed** (merged). PR #9 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
 
 Work ships as small, reviewable PRs: one concern each, docs updated alongside, tests included where code exists.
 Larger tasks may split into smaller PRs during implementation.
@@ -17,37 +17,38 @@ Larger tasks may split into smaller PRs during implementation.
 ## Phase 2: Rider app foundation
 - **PR #6:** Flutter rider app scaffold (navigation, theming, API client). *Completed (merged, #6).*
 - **PR #7:** Registration and login (Firebase Auth email/password; dev project by default, emulator optional). *Completed (merged, #7).*
-- **Maintenance (GitHub PR #8; unnumbered, between #7 and the planned #8):** Upgrade the mobile toolchain (Flutter 3.47.9, Firebase 5.x/7.x, AGP 9.1.0, Gradle 9.3.1, Kotlin 2.4.0, minSdk 24, iOS 15.0). *Completed (merged, GitHub #8).*
-- PR #8: Worker profile API and screens. (Roadmap numbering is independent of GitHub PR numbers, which also count maintenance and docs PRs.)
+- **PR #8:** Mobile toolchain upgrade (Flutter 3.47.9, Firebase core 5.x / auth 7.x, AGP 9.1.0, Gradle 9.3.1, Kotlin 2.4.0, minSdk 24, iOS 15.0). *Completed (merged, #8).*
+- **PR #9:** Docs: align PR references and roadmap numbering with GitHub PR numbers. *In progress.*
+- PR #10: Worker profile API and screens.
 
 ## Phase 3: Coverage and shifts
-- PR #9: Weekly policy model, API, and purchase flow (fixed pricing first).
-- PR #10: Shift declaration API and UI.
+- PR #11: Weekly policy model, API, and purchase flow (fixed pricing first).
+- PR #12: Shift declaration API and UI.
 
 ## Phase 4: Disruptions and claims
-- PR #11: Disruption events (mock feeds, admin-created events).
-- PR #12: Claim filing API and UI (`pending` state).
-- PR #13: Claim verification pipeline (rules-based first; fail-safe to pending).
-- PR #14: Wallet and simulated, idempotent payouts.
+- PR #13: Disruption events (mock feeds, admin-created events).
+- PR #14: Claim filing API and UI (`pending` state).
+- PR #15: Claim verification pipeline (rules-based first; fail-safe to pending).
+- PR #16: Wallet and simulated, idempotent payouts.
 
 ## Phase 5: AI service
-- PR #15: FastAPI scaffold, service-to-service auth.
-- PR #16: Risk scoring and premium calculation.
-- PR #17: Backend integration with the AI service.
+- PR #17: FastAPI scaffold, service-to-service auth.
+- PR #18: Risk scoring and premium calculation.
+- PR #19: Backend integration with the AI service.
 
 ## Phase 6: Fraud layer
-- PR #18: Neo4j local setup and graph model.
-- PR #19: Fraud checks integrated into verification.
+- PR #20: Neo4j local setup and graph model.
+- PR #21: Fraud checks integrated into verification.
 
 ## Phase 7: Admin dashboard
-- PR #20: Flutter Web admin scaffold and admin auth.
-- PR #21: Claims, zones, and metrics views.
-- PR #22: Disruption simulation controls.
+- PR #22: Flutter Web admin scaffold and admin auth.
+- PR #23: Claims, zones, and metrics views.
+- PR #24: Disruption simulation controls.
 
 ## Phase 8: Hardening and release
-- PR #23: End-to-end tests on emulators.
-- PR #24: Security review and dependency audit.
-- PR #25: Deployment configuration and docs.
+- PR #25: End-to-end tests on emulators.
+- PR #26: Security review and dependency audit.
+- PR #27: Deployment configuration and docs.
 
 ## Ground rules
 - Each PR should contain one focused, reviewable change. A feature may span multiple components when necessary.

@@ -36,7 +36,7 @@ class HomeScreen extends StatelessWidget {
             child: PlaceholderBody(
               icon: Icons.home_outlined,
               title: 'Home',
-              plannedPr: 8,
+              plannedPr: 10,
             ),
           ),
         ],

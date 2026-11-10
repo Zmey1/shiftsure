@@ -12,7 +12,7 @@ class ClaimsScreen extends StatelessWidget {
       body: const PlaceholderBody(
         icon: Icons.assignment_outlined,
         title: 'Claims',
-        plannedPr: 12,
+        plannedPr: 14,
       ),
     );
   }
