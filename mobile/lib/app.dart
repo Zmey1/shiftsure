@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 
 import 'api/api_client.dart';
+import 'auth/auth_gate.dart';
+import 'auth/auth_service.dart';
 import 'config/app_config.dart';
-import 'navigation/app_shell.dart';
 import 'theme/app_theme.dart';
 
 class ShiftSureApp extends StatefulWidget {
-  const ShiftSureApp({super.key, required this.config, this.apiClient});
+  const ShiftSureApp({
+    super.key,
+    required this.config,
+    required this.auth,
+    this.apiClient,
+  });
 
   final AppConfig config;
+  final AuthService auth;
 
   /// Overridable for tests; defaults to a client for [AppConfig.apiBaseUrl].
   final ApiClient? apiClient;
@@ -19,7 +26,11 @@ class ShiftSureApp extends StatefulWidget {
 
 class _ShiftSureAppState extends State<ShiftSureApp> {
   late final ApiClient _api =
-      widget.apiClient ?? ApiClient(baseUrl: widget.config.apiBaseUrl);
+      widget.apiClient ??
+      ApiClient(
+        baseUrl: widget.config.apiBaseUrl,
+        tokenProvider: widget.auth.getIdToken,
+      );
 
   @override
   void dispose() {
@@ -35,7 +46,7 @@ class _ShiftSureAppState extends State<ShiftSureApp> {
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ThemeMode.system,
-      home: AppShell(api: _api),
+      home: AuthGate(auth: widget.auth, api: _api),
     );
   }
 }

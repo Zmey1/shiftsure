@@ -4,7 +4,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shiftsure_rider/api/api_client.dart';
 import 'package:shiftsure_rider/app.dart';
+import 'package:shiftsure_rider/auth/auth_service.dart';
 import 'package:shiftsure_rider/config/app_config.dart';
+import 'support/fake_auth_service.dart';
 
 void main() {
   testWidgets('navigates between the four placeholder tabs', (tester) async {
@@ -15,6 +17,7 @@ void main() {
     await tester.pumpWidget(
       ShiftSureApp(
         config: AppConfig.parse('http://localhost:3000'),
+        auth: FakeAuthService(user: const AuthUser(uid: 'u1')),
         apiClient: api,
       ),
     );

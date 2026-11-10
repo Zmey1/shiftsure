@@ -8,9 +8,10 @@ import '../screens/wallet_screen.dart';
 
 /// Bottom-navigation shell for the four top-level sections.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key, required this.api});
+  const AppShell({super.key, required this.api, this.onSignOut});
 
   final ApiClient api;
+  final VoidCallback? onSignOut;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -26,7 +27,7 @@ class _AppShellState extends State<AppShell> {
       body: IndexedStack(
         index: _index,
         children: [
-          HomeScreen(api: widget.api),
+          HomeScreen(api: widget.api, onSignOut: widget.onSignOut),
           const PolicyScreen(),
           const ClaimsScreen(),
           const WalletScreen(),

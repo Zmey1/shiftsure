@@ -39,7 +39,7 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 ## Development
 
-Only the backend and the rider app scaffold exist so far (see [Backend](#backend-scaffold-implemented-pr-3-and-auth-middleware-implemented-pr-4) and [Rider app](#rider-app-scaffold-in-progress-pr-6)). Setup instructions for other components will be added as each is introduced.
+Only the backend and the rider app scaffold exist so far (see [Backend](#backend-scaffold-implemented-pr-3-and-auth-middleware-implemented-pr-4) and [Rider app](#rider-app-scaffold-implemented-pr-6-sign-in-in-progress-pr-7)). Setup instructions for other components will be added as each is introduced.
 
 ### Tooling baseline (Implemented)
 
@@ -82,9 +82,9 @@ npm test               # run tests (node:test)
 
 **Tests** are hermetic: they need no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`.
 
-### Rider app scaffold (In progress, PR #6)
+### Rider app (scaffold Implemented, PR #6; sign-in In progress, PR #7)
 
-A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders, and there is no sign-in, Firebase, or business data yet. The one working screen element is a **development diagnostic** card on Home that calls `GET /health` once on load (and on Retry); it is not a rider feature.
+A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders, and there is no business data yet. The one working screen element is a **development diagnostic** card on Home that calls `GET /health` once on load (and on Retry); it is not a rider feature.
 
 **Prerequisites:** Flutter 3.32.4 (stable; Dart 3.8.1) with the Android SDK for Android. iOS builds need macOS and Xcode and have **not** been verified.
 
@@ -104,4 +104,21 @@ flutter run --dart-define-from-file=config.local.json
 | Android emulator | `http://10.0.2.2:3000`, or keep the default and run `adb reverse tcp:3000 tcp:3000` |
 | Physical device | `http://<your-computer-LAN-IP>:3000` (the backend must listen on that interface) |
 
-Plain HTTP is allowed only in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`); release builds are HTTPS-only. `ApiClient` (`mobile/lib/api/api_client.dart`) can attach a Firebase ID token through an optional `tokenProvider`; nothing supplies one until authentication is built (PR #7).
+Plain HTTP is allowed only in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`); release builds are HTTPS-only. `ApiClient` (`mobile/lib/api/api_client.dart`) attaches the Firebase ID token (`Authorization: Bearer`) through `tokenProvider`, wired to Firebase Auth in PR #7.
+
+
+**Sign-in (In progress, PR #7).** Email/password registration, login and logout, with the session persisted by Firebase and the app gated on auth state (signed out: login/registration; signed in: the rider app). Covered by unit/widget tests using a fake auth service; **not yet verified end to end** against Firebase. Worker profiles, role assignment, password reset and social/phone sign-in are **Planned/not included**: a new rider has no backend role.
+
+- Firebase client config is in `mobile/lib/firebase_options.dart` (**tracked**: public client config for the `shiftsure-dev` project only, no admin credentials) and was generated with `flutterfire configure`; `mobile/firebase.json` records that setup. The Google Services Gradle plugin is not used (Firebase is initialised explicitly from `firebase_options.dart`), so Android builds need no `google-services.json`; it stays git-ignored. FlutterFire is pinned to `firebase_core` 3.x / `firebase_auth` 5.x to match Flutter 3.32.4; Android `minSdk` is 23. `GoogleService-Info.plist` (iOS) is not set up.
+- Default: the Firebase development project (`shiftsure-dev`); Email/Password must be enabled in its Console. The backend needs `FIREBASE_PROJECT_ID=shiftsure-dev` in `backend/.env` and **no** `FIREBASE_AUTH_EMULATOR_HOST`.
+- Emulator (optional, `USE_AUTH_EMULATOR=true`): the app, `firebase` CLI and backend all use the isolated project **`demo-shiftsure`**, never `shiftsure-dev`. Host defaults to `10.0.2.2` on Android and `127.0.0.1` otherwise (`AUTH_EMULATOR_HOST`/`AUTH_EMULATOR_PORT` override). The app refuses this mode in release builds. Not yet tested here.
+
+```bash
+# development project (backend: cd backend && npm run dev)
+cd mobile && flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000
+
+# local emulator (three terminals)
+firebase emulators:start --only auth --project demo-shiftsure   # repo root
+cd backend && FIREBASE_PROJECT_ID=demo-shiftsure FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099 npm run dev
+cd mobile && flutter run --dart-define=USE_AUTH_EMULATOR=true --dart-define=API_BASE_URL=http://10.0.2.2:3000
+```

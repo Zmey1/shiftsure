@@ -54,7 +54,7 @@ jobs:
       - name: Forbid committed secrets and credential files
         run: |
           set -euo pipefail
-          forbidden='(^|/)\.env(\..*)?$|\.(pem|key|p12|jks|keystore)$|(^|/)key\.properties$|(^|/)serviceAccount[^/]*\.json$|service-account[^/]*\.json$|-firebase-adminsdk-[^/]*\.json$|(^|/)google-services\.json$|(^|/)GoogleService-Info\.plist$|(^|/)firebase_options\.dart$'
+          forbidden='(^|/)\.env(\..*)?$|\.(pem|key|p12|jks|keystore)$|(^|/)key\.properties$|(^|/)serviceAccount[^/]*\.json$|service-account[^/]*\.json$|-firebase-adminsdk-[^/]*\.json$|(^|/)google-services\.json$|(^|/)GoogleService-Info\.plist$'
           allowed='(^|/)\.env(\.[^/]*)?\.(example|template)$|(^|/)\.env\.template$'
           hits=$(git ls-files | grep -E "$forbidden" | grep -vE "$allowed" || true)
           if [ -n "$hits" ]; then
