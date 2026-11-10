@@ -15,12 +15,11 @@ typedef TokenProvider = Future<String?> Function();
 /// Add verbs when a feature needs them.
 class ApiClient {
   ApiClient({
-    required Uri baseUrl,
+    required this._baseUrl,
     http.Client? client,
     this.tokenProvider,
     this.timeout = const Duration(seconds: 10),
-  }) : _baseUrl = baseUrl,
-       _client = client ?? http.Client();
+  }) : _client = client ?? http.Client();
 
   final Uri _baseUrl;
   final http.Client _client;

@@ -5,7 +5,7 @@ import 'package:shiftsure_rider/auth/auth_service.dart';
 /// In-memory [AuthService] for tests. Set [failure] to make the next
 /// sign-in/sign-up throw it.
 class FakeAuthService implements AuthService {
-  FakeAuthService({AuthUser? user}) : _user = user;
+  FakeAuthService({this._user});
 
   AuthUser? _user;
   final _controller = StreamController<AuthUser?>.broadcast();
