@@ -15,7 +15,8 @@ key.properties
 **/*-firebase-adminsdk-*.json
 **/google-services.json
 **/GoogleService-Info.plist
-**/firebase_options.dart
+# firebase_options.dart is tracked on purpose: it holds only public Firebase
+# client config (API key, app IDs) for the development project.
 Neo4j-*.txt
 
 # ---------- AI / tool-generated local files ----------

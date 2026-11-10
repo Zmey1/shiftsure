@@ -1,6 +1,6 @@
 # ShiftSure: Roadmap
 
-> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
+> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
 
 Work ships as small, reviewable PRs: one concern each, docs updated alongside, tests included where code exists.
 Larger tasks may split into smaller PRs during implementation.
@@ -15,8 +15,8 @@ Larger tasks may split into smaller PRs during implementation.
 - **PR #5:** Firestore security rules and emulator-based tests (deny-all for client SDK access). *Completed (merged, #5).*
 
 ## Phase 2: Rider app foundation
-- **PR #6:** Flutter rider app scaffold (navigation, theming, API client). *In progress.*
-- PR #7: Registration and login against the Firebase emulator.
+- **PR #6:** Flutter rider app scaffold (navigation, theming, API client). *Completed (merged, #6).*
+- **PR #7:** Registration and login (Firebase Auth email/password; dev project by default, emulator optional). *In progress.*
 - PR #8: Worker profile API and screens.
 
 ## Phase 3: Coverage and shifts

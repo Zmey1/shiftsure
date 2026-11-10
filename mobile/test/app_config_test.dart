@@ -22,4 +22,16 @@ void main() {
       expect(() => AppConfig.parse(bad), throwsFormatException, reason: bad);
     }
   });
+
+  test('auth emulator is off by default and configurable', () {
+    expect(AppConfig.fromEnvironment().useAuthEmulator, isFalse);
+    final c = AppConfig.parse(
+      'http://localhost:3000',
+      useAuthEmulator: true,
+      authEmulatorHost: ' ',
+    );
+    expect(c.useAuthEmulator, isTrue);
+    expect(c.authEmulatorHost, isNull);
+    expect(c.authEmulatorPort, 9099);
+  });
 }

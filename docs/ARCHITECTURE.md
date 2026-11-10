@@ -13,7 +13,7 @@
 
 | Component | Technology | Responsibility | Status |
 |---|---|---|---|
-| Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Scaffold **In progress** (PR #6: navigation, theme, API client, placeholder screens); all rider features **Planned** |
+| Rider app | Flutter (Android, iOS) | Registration, login, buy coverage, declare shifts, file and track claims, wallet | Scaffold **Implemented** (PR #6). Email/password registration, login, logout and auth-gated navigation **In progress** (PR #7; unit/widget-tested with fakes, not yet verified end to end); all other rider features **Planned** |
 | Admin dashboard | Flutter Web | Monitor zones, claims, pools, loss ratio; simulate disruptions | Planned |
 | Backend API | Node.js + Express | Auth verification, business logic, claim orchestration, wallet and payouts | Scaffold **Implemented** (Express app, config, `GET /health`); token auth and role middleware **Implemented** (PR #4; not yet applied to any route); business logic **Planned** |
 | Auth / database | Firebase Auth + Cloud Firestore | Identity, persistent data | Deny-all Firestore client rules **Implemented** (PR #5); data models **Planned** |
@@ -47,6 +47,7 @@ Disruption events are evidence only. They never approve claims or trigger payout
 
 - **Backend is the single integration point.** Clients never talk to the AI service or Neo4j directly.
 - **Server-side authorization.** Roles (rider, admin) are checked on the backend using verified Firebase ID tokens. **Decision (PR #4, implemented):** the role is read only from the token's signed `role` custom claim, not from a Firestore document. This avoids a database read per request and keeps authorization independent of Firestore rules; a missing or unknown claim means no role (denied). Consequences: claims change only on token refresh; they must be set server-side with the Admin SDK (registration and admin bootstrap are **Planned**); Firestore rules can read `request.auth.token.role`; any `role` field in Firestore is not authoritative.
+- **Rider app sign-in (PR #7, In progress).** The app signs riders in with Firebase Auth email/password and sends the Firebase ID token to the backend through `ApiClient.tokenProvider`. By default it uses the Firebase *development* project; `USE_AUTH_EMULATOR=true` switches to the local Auth emulator under the isolated `demo-shiftsure` project (matching the Firebase CLI and backend settings) and is refused in release builds. `firebase_options.dart` (public client config for the dev project) is tracked. The client never sets roles or claims; a newly registered rider has **no role** until trusted server code assigns one (**Planned**), so role-guarded backend routes will return 403 for them. No route uses `authenticate` yet.
 - **Service-to-service auth.** The backend authenticates to the AI service with a shared secret or equivalent.
 - **Idempotent payouts.** A claim can be paid at most once.
 - **Fail safe.** If fraud or verification services are unavailable, claims stay pending rather than auto-approving.
