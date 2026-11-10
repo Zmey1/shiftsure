@@ -6,6 +6,7 @@ import 'package:shiftsure_rider/api/api_client.dart';
 import 'package:shiftsure_rider/app.dart';
 import 'package:shiftsure_rider/auth/auth_service.dart';
 import 'package:shiftsure_rider/config/app_config.dart';
+
 import 'support/fake_auth_service.dart';
 
 void main() {

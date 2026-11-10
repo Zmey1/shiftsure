@@ -1,6 +1,6 @@
 # ShiftSure: Roadmap
 
-> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
+> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **Completed** (merged). A mobile toolchain maintenance PR is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
 
 Work ships as small, reviewable PRs: one concern each, docs updated alongside, tests included where code exists.
 Larger tasks may split into smaller PRs during implementation.
@@ -16,7 +16,8 @@ Larger tasks may split into smaller PRs during implementation.
 
 ## Phase 2: Rider app foundation
 - **PR #6:** Flutter rider app scaffold (navigation, theming, API client). *Completed (merged, #6).*
-- **PR #7:** Registration and login (Firebase Auth email/password; dev project by default, emulator optional). *In progress.*
+- **PR #7:** Registration and login (Firebase Auth email/password; dev project by default, emulator optional). *Completed (merged, #7).*
+- **Maintenance (between #7 and #8, unnumbered):** Upgrade the mobile toolchain (Flutter 3.47.9, Firebase 5.x/7.x, AGP 9.1.0, Gradle 9.3.1, Kotlin 2.4.0, minSdk 24, iOS 15.0). *In progress.*
 - PR #8: Worker profile API and screens.
 
 ## Phase 3: Coverage and shifts
