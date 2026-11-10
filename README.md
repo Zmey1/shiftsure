@@ -23,7 +23,7 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 | Area | Planned technology | Status |
 |---|---|---|
-| Rider app | Flutter (Android, iOS) | Scaffold **In progress** (PR #6); rider features **Planned** |
+| Rider app | Flutter (Android, iOS) | Scaffold **Implemented** (PR #6); sign-in **Implemented** (PR #7); rider features **Planned** |
 | Admin dashboard | Flutter Web | Planned |
 | Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); token auth and role middleware **Implemented** (PR #4, no protected routes yet); features **Planned** |
 | Auth and database | Firebase Auth + Cloud Firestore | Deny-all Firestore client rules and emulator tests **Implemented** (PR #5); data models **Planned** |
@@ -39,7 +39,7 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 ## Development
 
-Only the backend and the rider app scaffold exist so far (see [Backend](#backend-scaffold-implemented-pr-3-and-auth-middleware-implemented-pr-4) and [Rider app](#rider-app-scaffold-implemented-pr-6-sign-in-in-progress-pr-7)). Setup instructions for other components will be added as each is introduced.
+Only the backend and the rider app scaffold exist so far (see [Backend](#backend-scaffold-implemented-pr-3-and-auth-middleware-implemented-pr-4) and [Rider app](#rider-app-scaffold-implemented-pr-6-sign-in-implemented-pr-7)). Setup instructions for other components will be added as each is introduced.
 
 ### Tooling baseline (Implemented)
 
@@ -82,11 +82,11 @@ npm test               # run tests (node:test)
 
 **Tests** are hermetic: they need no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`.
 
-### Rider app (scaffold Implemented, PR #6; sign-in In progress, PR #7)
+### Rider app (scaffold Implemented, PR #6; sign-in Implemented, PR #7)
 
 A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders, and there is no business data yet. The one working screen element is a **development diagnostic** card on Home that calls `GET /health` once on load (and on Retry); it is not a rider feature.
 
-**Prerequisites (toolchain upgraded in the `chore/upgrade-mobile-toolchain` maintenance PR, **In progress**):** Flutter 3.47.9 (stable; Dart 3.13.7), JDK 17+, and the Android SDK with platform 36, build-tools 36.0.0 and NDK 28.2.13676358 (Gradle can download the NDK; accept licenses with `flutter doctor --android-licenses`). Android `minSdk` is 24 (Android 7.0+), up from 23. The iOS deployment target is 15.0 (raised from 12.0); iOS builds need macOS and Xcode and have **not** been verified.
+**Prerequisites (toolchain upgraded in the `chore/upgrade-mobile-toolchain` PR #8, **Implemented**):** Flutter 3.47.9 (stable; Dart 3.13.7), JDK 17+, and the Android SDK with platform 36, build-tools 36.0.0 and NDK 28.2.13676358 (Gradle can download the NDK; accept licenses with `flutter doctor --android-licenses`). Android `minSdk` is 24 (Android 7.0+), up from 23. The iOS deployment target is 15.0 (raised from 12.0); iOS builds need macOS and Xcode and have **not** been verified.
 
 Android build config: Gradle 9.3.1, Android Gradle Plugin 9.1.0, Kotlin Gradle Plugin 2.4.0, Java 17 source/target, `compileSdk`/`targetSdk` 36 (Flutter defaults). Verified with `flutter build apk --debug`, and manually on a physical Android device (Samsung SM S921B, reported by the maintainer) against the `shiftsure-dev` project: registration, login, logout, session persistence, auth-gated navigation and the Home `/health` card. **Known limitation:** `android.builtInKotlin=false` and `android.newDsl=false` (written by Flutter's own migrator, same as its 3.47 template) because Flutter's Gradle plugin does not yet support AGP 9's new DSL and `firebase_core`/`firebase_auth` still apply the Kotlin Gradle plugin, so Flutter prints a build warning about future Built-in Kotlin. Remove the flags when Flutter and FlutterFire support it.
 
@@ -109,7 +109,7 @@ flutter run --dart-define-from-file=config.local.json
 Plain HTTP is allowed only in Android **debug** builds (`android/app/src/debug/AndroidManifest.xml`); release builds are HTTPS-only. `ApiClient` (`mobile/lib/api/api_client.dart`) attaches the Firebase ID token (`Authorization: Bearer`) through `tokenProvider`, wired to Firebase Auth in PR #7.
 
 
-**Sign-in (In progress, PR #7).** Email/password registration, login and logout, with the session persisted by Firebase and the app gated on auth state (signed out: login/registration; signed in: the rider app). Covered by unit/widget tests using a fake auth service; manually verified end to end on a physical Android device against `shiftsure-dev` after the toolchain upgrade (maintainer-reported; not automated). Worker profiles, role assignment, password reset and social/phone sign-in are **Planned/not included**: a new rider has no backend role.
+**Sign-in (Implemented, PR #7).** Email/password registration, login and logout, with the session persisted by Firebase and the app gated on auth state (signed out: login/registration; signed in: the rider app). Covered by unit/widget tests using a fake auth service; manually verified end to end on a physical Android device against `shiftsure-dev` after the toolchain upgrade (maintainer-reported; not automated). Worker profiles, role assignment, password reset and social/phone sign-in are **Planned/not included**: a new rider has no backend role.
 
 - Firebase client config is in `mobile/lib/firebase_options.dart` (**tracked**: public client config for the `shiftsure-dev` project only, no admin credentials) and was generated with `flutterfire configure`; `mobile/firebase.json` records that setup. The Google Services Gradle plugin is not used (Firebase is initialised explicitly from `firebase_options.dart`), so Android builds need no `google-services.json`; it stays git-ignored. FlutterFire is `firebase_core` 5.1.x / `firebase_auth` 7.0.x (Flutter 3.47.9); Android `minSdk` is 24. `GoogleService-Info.plist` (iOS) is not set up.
 - Default: the Firebase development project (`shiftsure-dev`); Email/Password must be enabled in its Console. The backend needs `FIREBASE_PROJECT_ID=shiftsure-dev` in `backend/.env` and **no** `FIREBASE_AUTH_EMULATOR_HOST`.

@@ -12,7 +12,7 @@ class WalletScreen extends StatelessWidget {
       body: const PlaceholderBody(
         icon: Icons.account_balance_wallet_outlined,
         title: 'Wallet',
-        plannedPr: 14,
+        plannedPr: 16,
       ),
     );
   }

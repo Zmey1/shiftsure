@@ -24,9 +24,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Placeholder · planned for PR #8'), findsOneWidget);
+    expect(find.text('Placeholder · planned for PR #10'), findsOneWidget);
 
-    for (final (label, pr) in [('Policy', 9), ('Claims', 12), ('Wallet', 14)]) {
+    for (final (label, pr) in [
+      ('Policy', 11),
+      ('Claims', 14),
+      ('Wallet', 16),
+    ]) {
       await tester.tap(
         find.descendant(
           of: find.byType(NavigationBar),

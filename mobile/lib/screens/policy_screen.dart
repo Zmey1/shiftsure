@@ -12,7 +12,7 @@ class PolicyScreen extends StatelessWidget {
       body: const PlaceholderBody(
         icon: Icons.shield_outlined,
         title: 'Policy',
-        plannedPr: 9,
+        plannedPr: 11,
       ),
     );
   }
