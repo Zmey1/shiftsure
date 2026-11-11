@@ -5,47 +5,35 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shiftsure_rider/api/api_client.dart';
-import 'package:shiftsure_rider/app.dart';
 import 'package:shiftsure_rider/auth/auth_service.dart';
-import 'package:shiftsure_rider/config/app_config.dart';
 import 'package:shiftsure_rider/navigation/app_shell.dart';
 import 'package:shiftsure_rider/screens/login_screen.dart';
 import 'package:shiftsure_rider/screens/register_screen.dart';
 
 import 'support/fake_auth_service.dart';
+import 'support/fake_backend.dart';
 
+/// Pumps the app with a backend where every test user already has a profile,
+/// so these tests exercise auth only (profile flows: profile_flow_test.dart).
 Future<FakeAuthService> pumpApp(
   WidgetTester tester, {
   FakeAuthService? auth,
   Map<String, String>? seenHeaders,
 }) async {
   final fake = auth ?? FakeAuthService();
-  final api = ApiClient(
-    baseUrl: Uri.parse('http://localhost:3000'),
-    tokenProvider: fake.getIdToken,
-    client: MockClient((req) async {
-      seenHeaders?.addAll(req.headers);
-      return http.Response('{"status":"ok"}', 200);
-    }),
+  final backend = FakeBackend(
+    fake,
+    profiles: {'u1': profileJson('u1'), 'uid-1': profileJson('uid-1')},
   );
-  await tester.pumpWidget(
-    ShiftSureApp(
-      config: AppConfig.parse('http://localhost:3000'),
-      auth: fake,
-      apiClient: api,
-    ),
-  );
-  await tester.pumpAndSettle();
+  if (seenHeaders != null) {
+    backend.intercept = (req) async {
+      seenHeaders.addAll(req.headers);
+      return null;
+    };
+  }
+  await pumpShiftSure(tester, backend);
   return fake;
 }
-
-Future<void> fill(WidgetTester tester, Map<String, String> fields) async {
-  for (final e in fields.entries) {
-    await tester.enterText(find.byKey(Key(e.key)), e.value);
-  }
-}
-
-Finder button(String label) => find.widgetWithText(FilledButton, label);
 
 void main() {
   testWidgets('signed out shows login; signed in shows the rider app', (
@@ -174,7 +162,7 @@ void main() {
       auth: FakeAuthService(user: const AuthUser(uid: 'u1')),
       seenHeaders: headers,
     );
-    // Home loads /health on startup.
+    // The profile gate and Home's /health check both send it.
     expect(headers['Authorization'], 'Bearer token-1');
 
     await auth.signOut();

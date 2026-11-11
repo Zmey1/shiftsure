@@ -11,6 +11,9 @@ class FakeAuthService implements AuthService {
   final _controller = StreamController<AuthUser?>.broadcast();
 
   AuthFailure? failure;
+
+  /// uid given to the next user who signs in or up.
+  String nextUid = 'uid-1';
   Completer<void>? gate; // when set, sign-in/up wait on it
   final calls = <String>[];
 
@@ -29,7 +32,7 @@ class FakeAuthService implements AuthService {
     calls.add('$kind:$email');
     await gate?.future;
     if (failure != null) throw failure!;
-    _user = AuthUser(uid: 'uid-1', email: email);
+    _user = AuthUser(uid: nextUid, email: email);
     _controller.add(_user);
   }
 
@@ -48,6 +51,16 @@ class FakeAuthService implements AuthService {
     _controller.add(null);
   }
 
+  /// Number of forced refreshes; the token becomes `token-<n+1>` after each.
+  int refreshes = 0;
+
   @override
-  Future<String?> getIdToken() async => _user == null ? null : 'token-1';
+  Future<String?> getIdToken({bool forceRefresh = false}) async {
+    if (_user == null) return null;
+    if (forceRefresh) {
+      refreshes++;
+      calls.add('refreshToken');
+    }
+    return 'token-${refreshes + 1}';
+  }
 }

@@ -2,7 +2,8 @@ name: CI
 
 # repo-hygiene: repository-wide checks (whitespace, secrets, JSON, Markdown links).
 # backend-tests: installs and tests backend/.
-# firestore-rules-tests: Firestore security-rules tests on the local emulator (demo project).
+# firestore-rules-tests: Firestore security-rules tests and backend Auth/Firestore
+#   integration tests on the local emulators (demo project).
 # mobile-tests: format, analyze, and test the Flutter rider app in mobile/.
 # Build/test jobs for other components
 # are added in the PR that introduces each component.
@@ -157,6 +158,9 @@ jobs:
 
       - name: Run Firestore rules tests (local emulator, demo project)
         run: npm run test:rules
+
+      - name: Run backend emulator integration tests (Auth + Firestore emulators, demo project)
+        run: npm run test:emulator
 
   mobile-tests:
     runs-on: ubuntu-latest

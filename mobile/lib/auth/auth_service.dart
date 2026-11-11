@@ -36,7 +36,11 @@ abstract class AuthService {
 
   Future<void> signOut();
 
-  /// A fresh Firebase ID token, or null when signed out. Usable as
+  /// A valid Firebase ID token, or null when signed out. Usable as
   /// `ApiClient.tokenProvider`.
-  Future<String?> getIdToken();
+  ///
+  /// The SDK caches the token for up to an hour. Pass [forceRefresh] after
+  /// the backend changes this user's custom claims (e.g. assigns the rider
+  /// role) so the next request carries them.
+  Future<String?> getIdToken({bool forceRefresh = false});
 }

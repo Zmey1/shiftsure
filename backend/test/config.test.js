@@ -80,6 +80,18 @@ test('production rejects FIREBASE_AUTH_EMULATOR_HOST', () => {
   );
 });
 
+test('production rejects FIRESTORE_EMULATOR_HOST', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        NODE_ENV: 'production',
+        FIREBASE_PROJECT_ID: 'real-proj',
+        FIRESTORE_EMULATOR_HOST: '127.0.0.1:8080',
+      }),
+    /FIRESTORE_EMULATOR_HOST must not be set/,
+  );
+});
+
 test('missing .env file is not an error', () => {
   assert.equal(loadEnvFileIfPresent(join(tmpdir(), 'shiftsure-does-not-exist.env')), false);
 });

@@ -38,7 +38,8 @@ class FirebaseAuthService implements AuthService {
   Future<void> signOut() => _auth.signOut();
 
   @override
-  Future<String?> getIdToken() async => _auth.currentUser?.getIdToken();
+  Future<String?> getIdToken({bool forceRefresh = false}) async =>
+      _auth.currentUser?.getIdToken(forceRefresh);
 
   Future<void> _run(Future<void> Function() action) async {
     try {
