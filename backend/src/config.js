@@ -59,6 +59,10 @@ export function loadConfig(env = process.env) {
     if (!isBlank(env.FIREBASE_AUTH_EMULATOR_HOST)) {
       errors.push('FIREBASE_AUTH_EMULATOR_HOST must not be set in production');
     }
+    // Production data must never be redirected to a local emulator.
+    if (!isBlank(env.FIRESTORE_EMULATOR_HOST)) {
+      errors.push('FIRESTORE_EMULATOR_HOST must not be set in production');
+    }
   }
 
   if (errors.length > 0) {

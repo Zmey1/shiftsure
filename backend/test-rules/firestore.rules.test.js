@@ -100,6 +100,23 @@ for (const [name, makeContext] of Object.entries(clients)) {
       await assertFails(setDoc(doc(db, NESTED), { v: 2 }));
     });
 
+    test('worker profile: no direct client access, even to the caller\'s own uid', async () => {
+      // Worker profiles are backend-only (Admin SDK). Covers the owner case
+      // (rider-1 reading/writing workers/rider-1) as well as other uids.
+      const uids = ['rider-1', 'admin-1', 'someone-else'];
+      await env.withSecurityRulesDisabled(async (ctx) => {
+        for (const uid of uids) await setDoc(doc(ctx.firestore(), `workers/${uid}`), { name: 'Seed' });
+      });
+      for (const uid of uids) {
+        const ref = doc(db, `workers/${uid}`);
+        await assertFails(getDoc(ref));
+        await assertFails(setDoc(ref, { name: 'X', role: 'admin' }));
+        await assertFails(updateDoc(ref, { name: 'X' }));
+        await assertFails(deleteDoc(ref));
+      }
+      await assertFails(getDocs(collection(db, 'workers')));
+    });
+
     test('data is unchanged after attempted writes', async () => {
       await seed();
       await assertFails(updateDoc(doc(db, SEEDED), { v: 2 }));

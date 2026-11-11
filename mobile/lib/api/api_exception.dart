@@ -13,7 +13,13 @@ enum ApiErrorKind {
 }
 
 class ApiException implements Exception {
-  const ApiException(this.kind, this.message, {this.statusCode, this.code});
+  const ApiException(
+    this.kind,
+    this.message, {
+    this.statusCode,
+    this.code,
+    this.body,
+  });
 
   final ApiErrorKind kind;
 
@@ -26,6 +32,10 @@ class ApiException implements Exception {
   /// Machine-readable `error` value from the backend body
   /// (e.g. `unauthenticated`, `forbidden`), when present.
   final String? code;
+
+  /// The decoded JSON error body, when present (e.g. per-field
+  /// `validation_failed` details).
+  final Map<String, dynamic>? body;
 
   @override
   String toString() => 'ApiException(${kind.name}): $message';

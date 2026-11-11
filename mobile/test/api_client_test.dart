@@ -110,4 +110,63 @@ void main() {
     );
     expect(e.kind, ApiErrorKind.timeout);
   });
+
+  test('POST and PATCH send a JSON body with the bearer token', () async {
+    final seen = <http.Request>[];
+    final api = clientFor((req) async {
+      seen.add(req);
+      return http.Response('{"ok":true}', req.method == 'POST' ? 201 : 200);
+    }, tokenProvider: () async => 'abc');
+
+    expect(await api.postJson('/api/x', {'a': 1}), {'ok': true});
+    expect(await api.patchJson('/api/x', {'b': 'c'}), {'ok': true});
+
+    expect(seen.map((r) => r.method), ['POST', 'PATCH']);
+    expect(seen.map((r) => r.body), ['{"a":1}', '{"b":"c"}']);
+    for (final r in seen) {
+      expect(r.url.toString(), 'http://localhost:3000/api/x');
+      expect(r.headers['Content-Type'], startsWith('application/json'));
+      expect(r.headers['Authorization'], 'Bearer abc');
+    }
+  });
+
+  test('GET sends no body or Content-Type', () async {
+    final api = clientFor((req) async {
+      expect(req.body, isEmpty);
+      expect(req.headers.containsKey('Content-Type'), isFalse);
+      return http.Response('{}', 200);
+    });
+    await api.getJson('/x');
+  });
+
+  test('write errors keep the status, code, and error body', () async {
+    final api = clientFor(
+      (_) async => http.Response(
+        '{"error":"validation_failed","fields":{"phone":"invalid"}}',
+        400,
+      ),
+    );
+    try {
+      await api.postJson('/x', {});
+      fail('expected ApiException');
+    } on ApiException catch (e) {
+      expect(e.kind, ApiErrorKind.http);
+      expect(e.statusCode, 400);
+      expect(e.code, 'validation_failed');
+      expect(e.body?['fields'], {'phone': 'invalid'});
+    }
+  });
+
+  test('a slow write maps to a timeout error', () async {
+    final api = clientFor(
+      (_) => Completer<http.Response>().future,
+      timeout: const Duration(milliseconds: 20),
+    );
+    await expectLater(
+      api.patchJson('/x', {}),
+      throwsA(
+        isA<ApiException>().having((e) => e.kind, 'kind', ApiErrorKind.timeout),
+      ),
+    );
+  });
 }

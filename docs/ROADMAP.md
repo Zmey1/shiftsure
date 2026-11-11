@@ -1,6 +1,6 @@
 # ShiftSure: Roadmap
 
-> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **Completed** (merged). PR #8 is **Completed** (merged). PR #9 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
+> **Status: early setup.** PR #1 is **Completed** (merged). PR #2 is **Completed** (merged). PR #3 is **Completed** (merged). PR #4 is **Completed** (merged). PR #5 is **Completed** (merged). PR #6 is **Completed** (merged). PR #7 is **Completed** (merged). PR #8 is **Completed** (merged). PR #9 is **Completed** (merged). PR #10 is **In progress**. All other items are **Not started**. Scope and ordering may change after review.
 
 Work ships as small, reviewable PRs: one concern each, docs updated alongside, tests included where code exists.
 Larger tasks may split into smaller PRs during implementation.
@@ -18,11 +18,16 @@ Larger tasks may split into smaller PRs during implementation.
 - **PR #6:** Flutter rider app scaffold (navigation, theming, API client). *Completed (merged, #6).*
 - **PR #7:** Registration and login (Firebase Auth email/password; dev project by default, emulator optional). *Completed (merged, #7).*
 - **PR #8:** Mobile toolchain upgrade (Flutter 3.47.9, Firebase core 5.x / auth 7.x, AGP 9.1.0, Gradle 9.3.1, Kotlin 2.4.0, minSdk 24, iOS 15.0). *Completed (merged, #8).*
-- **PR #9:** Docs: align PR references and roadmap numbering with GitHub PR numbers. *In progress.*
-- PR #10: Worker profile API and screens.
+- **PR #9:** Docs: align PR references and roadmap numbering with GitHub PR numbers. *Completed (merged, #9).*
+- **PR #10:** Worker profile API and screens (name, phone, city, delivery platform; backend-assigned rider role during onboarding). *In progress.* Does **not** include dark stores, zones, insurance pools, or policies.
 
 ## Phase 3: Coverage and shifts
 - PR #11: Weekly policy model, API, and purchase flow (fixed pricing first).
+  - **Dependency (not implemented by PR #10):** a policy can only be bought once the rider has a validated dark-store and zone assignment. That needs, first:
+    1. A backend-managed **dark-store catalog** linked to **zones**: dark store = weekly insurance pool membership; zone = geographic exposure and disruption coverage; several dark stores may share one zone while keeping separate pools. The prototype may use a small, clearly labelled demonstration dataset. Publicly sourced store locations must not be treated as real delivery boundaries or reused without permission.
+    2. **Manual store assignment** (no GPS, so the prototype works from any city): the rider picks a platform and city, the backend lists matching stores, the rider selects one, and the backend validates its existence, availability, and platform/city compatibility, then resolves `zone_id`. There is no default or fallback zone. Changing a profile's platform or city must then re-validate the assignment. The free-text `city` from PR #10 is reconciled with the catalog at this step.
+    3. **Weekly insurance pools**, one per dark store per week.
+  - This is likely too large for one PR and is expected to be split into separate PRs (catalog and assignment, pools, policy purchase) when work starts; numbering will be re-aligned to GitHub PR numbers then.
 - PR #12: Shift declaration API and UI.
 
 ## Phase 4: Disruptions and claims

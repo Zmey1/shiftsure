@@ -1,5 +1,7 @@
 import { createApp } from './app.js';
 import { loadConfig, loadEnvFileIfPresent } from './config.js';
+import { createFirebaseServices } from './firebase.js';
+import { createWorkerRepository } from './workers/repository.js';
 
 let config;
 try {
@@ -10,7 +12,10 @@ try {
   process.exit(1);
 }
 
-const server = createApp(config).listen(config.port, () => {
+const { verifyIdToken, auth, db } = createFirebaseServices(config);
+const services = { verifyIdToken, auth, workers: createWorkerRepository(db) };
+
+const server = createApp(config, services).listen(config.port, () => {
   console.log(`${config.serviceName} listening on port ${server.address().port} (${config.nodeEnv})`);
 });
 

@@ -10,9 +10,6 @@ import 'api_exception.dart';
 typedef TokenProvider = Future<String?> Function();
 
 /// Minimal JSON client for the ShiftSure backend.
-///
-/// Only `GET` exists today, because the backend only exposes `GET /health`.
-/// Add verbs when a feature needs them.
 class ApiClient {
   ApiClient({
     required this._baseUrl,
@@ -25,27 +22,49 @@ class ApiClient {
   final http.Client _client;
 
   /// When set and it returns a token, requests carry
-  /// `Authorization: Bearer <token>`. Wired to Firebase Auth in a later PR.
+  /// `Authorization: Bearer <token>`. The app wires this to Firebase Auth.
   final TokenProvider? tokenProvider;
 
   final Duration timeout;
 
   /// GETs [path] (relative to the base URL) and returns the decoded JSON
   /// object. Throws [ApiException] on any failure.
-  Future<Map<String, dynamic>> getJson(String path) async {
+  Future<Map<String, dynamic>> getJson(String path) => _send('GET', path);
+
+  /// POSTs [body] as JSON. Same return and error behaviour as [getJson].
+  Future<Map<String, dynamic>> postJson(
+    String path,
+    Map<String, dynamic> body,
+  ) => _send('POST', path, body: body);
+
+  /// PATCHes [body] as JSON. Same return and error behaviour as [getJson].
+  Future<Map<String, dynamic>> patchJson(
+    String path,
+    Map<String, dynamic> body,
+  ) => _send('PATCH', path, body: body);
+
+  Future<Map<String, dynamic>> _send(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async {
     final uri = _resolve(path);
     final http.Response response;
     try {
       final token = await tokenProvider?.call();
+      final request = http.Request(method, uri)
+        ..headers.addAll({
+          'Accept': 'application/json',
+          if (token != null && token.isNotEmpty)
+            'Authorization': 'Bearer $token',
+        });
+      if (body != null) {
+        request.headers['Content-Type'] = 'application/json';
+        request.body = jsonEncode(body);
+      }
       response = await _client
-          .get(
-            uri,
-            headers: {
-              'Accept': 'application/json',
-              if (token != null && token.isNotEmpty)
-                'Authorization': 'Bearer $token',
-            },
-          )
+          .send(request)
+          .then(http.Response.fromStream)
           .timeout(timeout);
     } on TimeoutException {
       throw const ApiException(
@@ -64,23 +83,24 @@ class ApiClient {
       );
     }
 
-    final body = _decodeObject(response.body);
+    final decoded = _decodeObject(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final code = body?['error'];
+      final code = decoded?['error'];
       throw ApiException(
         ApiErrorKind.http,
         'Request failed (${response.statusCode}).',
         statusCode: response.statusCode,
         code: code is String ? code : null,
+        body: decoded,
       );
     }
-    if (body == null) {
+    if (decoded == null) {
       throw const ApiException(
         ApiErrorKind.invalidResponse,
         'Unexpected response from server.',
       );
     }
-    return body;
+    return decoded;
   }
 
   void close() => _client.close();

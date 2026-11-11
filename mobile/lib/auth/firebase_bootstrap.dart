@@ -27,6 +27,10 @@ Future<void> initFirebase(AppConfig config) async {
     await FirebaseAuth.instance.useAuthEmulator(
       config.authEmulatorHost ?? defaultAuthEmulatorHost(),
       config.authEmulatorPort,
+      // The host is already resolved above. FlutterFire's automatic mapping
+      // would silently rewrite an explicit 127.0.0.1 to 10.0.2.2 on Android,
+      // which breaks physical devices using `adb reverse`.
+      automaticHostMapping: false,
     );
   }
 }
