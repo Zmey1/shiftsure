@@ -1,6 +1,6 @@
 # ShiftSure rider app
 
-Flutter app for Android and iOS. **Status:** scaffold implemented (PR #6); email/password sign-in **implemented** (PR #7); worker profile setup, view and edit **in progress** (PR #10). Setup and run instructions are in the
+Flutter app for Android and iOS. **Status:** scaffold implemented (PR #6); email/password sign-in **implemented** (PR #7); worker profile setup, view and edit **implemented** (PR #10); dark-store selection **in progress** (PR #11). Setup and run instructions are in the
 [root README](../README.md#rider-app-scaffold-implemented-pr-6-sign-in-implemented-pr-7).
 
 - `lib/api/`: `ApiClient` and `ApiException`

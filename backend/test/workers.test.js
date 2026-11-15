@@ -1,10 +1,13 @@
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
+import { createCatalog } from '../src/catalog/catalog.js';
+import { DEMO_CATALOG } from '../src/catalog/demo-catalog.js';
 import { loadConfig } from '../src/config.js';
 import { ProfileExistsError, ProfileNotFoundError } from '../src/workers/repository.js';
 
-// Hermetic: fake token verifier, fake Admin Auth, in-memory worker repository.
+// Hermetic: fake token verifier, fake Admin Auth, in-memory worker repository,
+// and the real demo catalog.
 // Tokens carry the role claim as it was when the token was minted; the fake
 // user records hold the *current* claims (like Firebase).
 
@@ -50,12 +53,24 @@ const fakeWorkers = {
     }
     if (store[uid]) throw new ProfileExistsError();
     const t = iso();
-    store[uid] = { uid, ...fields, created_at: t, updated_at: t };
+    store[uid] = { uid, ...fields, dark_store_id: null, zone_id: null, created_at: t, updated_at: t };
     return { ...store[uid] };
   },
-  async update(uid, fields) {
+  // Same contract as the Firestore repository (which runs these in transactions).
+  async update(uid, fields, { assignmentStillValid } = {}) {
     if (!store[uid]) throw new ProfileNotFoundError();
-    store[uid] = { ...store[uid], ...fields, updated_at: iso() };
+    const merged = { ...store[uid], ...fields, updated_at: iso() };
+    if (merged.dark_store_id != null && assignmentStillValid && !assignmentStillValid(merged)) {
+      merged.dark_store_id = null;
+      merged.zone_id = null;
+    }
+    store[uid] = merged;
+    return { ...store[uid] };
+  },
+  async assignDarkStore(uid, resolve) {
+    if (!store[uid]) throw new ProfileNotFoundError();
+    const { dark_store_id, zone_id } = resolve({ ...store[uid] });
+    store[uid] = { ...store[uid], dark_store_id, zone_id, updated_at: iso() };
     return { ...store[uid] };
   },
 };
@@ -71,7 +86,12 @@ let logged;
 const originalError = console.error;
 
 before(async () => {
-  const app = createApp(loadConfig({ NODE_ENV: 'test' }), { verifyIdToken, auth: fakeAuth, workers: fakeWorkers });
+  const app = createApp(loadConfig({ NODE_ENV: 'test' }), {
+    verifyIdToken,
+    auth: fakeAuth,
+    workers: fakeWorkers,
+    catalog: createCatalog(DEMO_CATALOG),
+  });
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -140,11 +160,14 @@ test('new user: GET 404, POST creates profile and assigns rider role, GET 200', 
   assert.deepEqual(created.body.profile, {
     uid: 'a',
     ...valid,
+    dark_store_id: null,
+    zone_id: null,
     created_at: '2026-01-01T00:00:01.000Z',
     updated_at: '2026-01-01T00:00:01.000Z',
+    dark_store: null,
   });
   assert.deepEqual(claimWrites, [{ uid: 'a', claims: { role: 'rider' } }]);
-  assert.deepEqual(store.a, created.body.profile);
+  assert.deepEqual({ ...store.a, dark_store: null }, created.body.profile);
 
   const fetched = await call('GET', me, { token: 'rider-a' });
   assert.equal(fetched.status, 200);
@@ -329,4 +352,148 @@ test('storage errors return a generic 500 without leaking details', async () => 
 test('health stays available without Firebase services', async () => {
   const res = await call('GET', '/health');
   assert.equal(res.status, 200);
+});
+
+// --- Dark-store catalog and assignment (PR #11) ---
+
+const stores = '/api/dark-stores';
+const choose = `${me}/dark-store`;
+
+/** A rider with a saved profile (default: Zepto, Bengaluru). */
+async function rider(overrides = {}) {
+  await call('POST', me, { token: 'new-a', body: { ...valid, ...overrides } });
+}
+
+test('dark-store routes require a rider token and a profile', async () => {
+  for (const [method, path] of [['GET', stores], ['PUT', choose]]) {
+    const body = { dark_store_id: 'demo-ds-blr-zepto-1' };
+    for (const token of [undefined, 'bad-token']) {
+      assert.equal((await call(method, path, { token, body })).status, 401, `${method} ${path} ${token}`);
+    }
+    for (const token of ['new-a', 'admin', 'stale-admin', 'odd-role']) {
+      assert.equal((await call(method, path, { token, body })).status, 403, `${method} ${path} ${token}`);
+    }
+    users.a.customClaims = { role: 'rider' };
+    const missing = await call(method, path, { token: 'rider-a', body });
+    assert.deepEqual([missing.status, missing.body], [404, { error: 'profile_not_found' }]);
+  }
+});
+
+test("GET /api/dark-stores lists only stores matching the rider's stored platform and city", async () => {
+  await rider({ city: ' bengaluru ' }); // stored as 'bengaluru'; matched case-insensitively
+  const res = await call('GET', `${stores}?platform=blinkit&city=Mumbai`, { token: 'rider-a' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.demo, true);
+  assert.equal(res.body.platform, 'zepto');
+  assert.equal(res.body.city, 'bengaluru');
+  assert.deepEqual(
+    res.body.stores.map((s) => s.id),
+    ['demo-ds-blr-zepto-1', 'demo-ds-blr-zepto-2'],
+  );
+  assert.deepEqual(res.body.stores[0].zone, { id: 'demo-zone-blr-1', name: 'Demo Zone BLR-1' });
+  assert.deepEqual(res.body.available_cities, ['Bengaluru', 'Mumbai']);
+});
+
+test('GET /api/dark-stores is empty for a city or platform without demo stores', async () => {
+  await rider({ city: 'Pune' });
+  const res = await call('GET', stores, { token: 'rider-a' });
+  assert.deepEqual(res.body.stores, []);
+  assert.deepEqual(res.body.available_cities, ['Bengaluru', 'Mumbai']);
+
+  await call('PATCH', me, { token: 'rider-a', body: { platform: 'other' } });
+  const other = await call('GET', stores, { token: 'rider-a' });
+  assert.deepEqual([other.body.stores, other.body.available_cities], [[], []]);
+});
+
+test('PUT assigns a valid store and resolves zone_id on the backend', async () => {
+  await rider();
+  const res = await call('PUT', choose, { token: 'rider-a', body: { dark_store_id: 'demo-ds-blr-zepto-2' } });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.profile.dark_store_id, 'demo-ds-blr-zepto-2');
+  assert.equal(res.body.profile.zone_id, 'demo-zone-blr-2');
+  assert.deepEqual(res.body.profile.dark_store, {
+    id: 'demo-ds-blr-zepto-2',
+    name: 'Demo Zepto Store BLR-2A',
+    zone: { id: 'demo-zone-blr-2', name: 'Demo Zone BLR-2' },
+  });
+  assert.equal(store.a.zone_id, 'demo-zone-blr-2');
+
+  // The assignment shows up on GET and can be changed.
+  assert.equal((await call('GET', me, { token: 'rider-a' })).body.profile.dark_store.id, 'demo-ds-blr-zepto-2');
+  await call('PUT', choose, { token: 'rider-a', body: { dark_store_id: 'demo-ds-blr-zepto-1' } });
+  assert.deepEqual([store.a.dark_store_id, store.a.zone_id], ['demo-ds-blr-zepto-1', 'demo-zone-blr-1']);
+});
+
+test('PUT rejects unknown, unavailable, and incompatible stores without writing', async () => {
+  await rider({ city: 'Mumbai' });
+  const cases = [
+    ['nope', 'store_not_found'],
+    ['__proto__', 'store_not_found'],
+    ['demo-ds-mum-zepto-2', 'store_unavailable'], // inactive
+    ['demo-ds-mum-blinkit-1', 'store_mismatch'], // other platform
+    ['demo-ds-blr-zepto-1', 'store_mismatch'], // other city
+  ];
+  for (const [id, error] of cases) {
+    const res = await call('PUT', choose, { token: 'rider-a', body: { dark_store_id: id } });
+    assert.deepEqual([res.status, res.body], [422, { error }], id);
+  }
+  assert.deepEqual([store.a.dark_store_id, store.a.zone_id], [null, null]);
+});
+
+test('PUT validates the body; the client cannot set zone_id or other fields', async () => {
+  await rider();
+  const cases = [
+    [{}, { dark_store_id: 'required' }],
+    [{ dark_store_id: '' }, { dark_store_id: 'required' }],
+    [{ dark_store_id: 42 }, { dark_store_id: 'invalid' }],
+    [{ dark_store_id: 'x'.repeat(101) }, { dark_store_id: 'invalid' }],
+    [{ dark_store_id: 'demo-ds-blr-zepto-1', zone_id: 'demo-zone-mum-1' }, { zone_id: 'unknown_field' }],
+    [{ dark_store_id: 'demo-ds-blr-zepto-1', city: 'Mumbai' }, { city: 'unknown_field' }],
+    [['demo-ds-blr-zepto-1'], { _body: 'invalid' }],
+  ];
+  for (const [body, fields] of cases) {
+    const res = await call('PUT', choose, { token: 'rider-a', body });
+    assert.deepEqual([res.status, res.body], [400, { error: 'validation_failed', fields }], JSON.stringify(body));
+  }
+  assert.equal((await call('PUT', choose, { token: 'rider-a' })).status, 400);
+  assert.equal(store.a.dark_store_id, null);
+});
+
+test("a rider cannot assign a store for another worker", async () => {
+  await call('POST', me, { token: 'new-b', body: valid });
+  await rider();
+  for (const path of ['/api/workers/b/dark-store', `${choose}?uid=b`]) {
+    await call('PUT', path, {
+      token: 'rider-a',
+      body: { dark_store_id: 'demo-ds-blr-zepto-1' },
+      headers: { 'X-User-Id': 'b' },
+    });
+  }
+  assert.equal(store.b.dark_store_id, null);
+  assert.equal(store.a.dark_store_id, 'demo-ds-blr-zepto-1');
+});
+
+test('PATCH re-validates the assignment when platform or city changes', async () => {
+  await rider();
+  await call('PUT', choose, { token: 'rider-a', body: { dark_store_id: 'demo-ds-blr-zepto-1' } });
+
+  // Unrelated and compatible edits keep the store.
+  for (const body of [{ name: 'Rahul K' }, { phone: '9123456789' }, { city: '  BENGALURU ' }]) {
+    const res = await call('PATCH', me, { token: 'rider-a', body });
+    assert.equal(res.body.profile.dark_store_id, 'demo-ds-blr-zepto-1', JSON.stringify(body));
+    assert.equal(res.body.profile.dark_store.zone.id, 'demo-zone-blr-1');
+  }
+
+  // A city change makes it incompatible: cleared, with no fallback zone.
+  const moved = await call('PATCH', me, { token: 'rider-a', body: { city: 'Mumbai' } });
+  assert.equal(moved.status, 200);
+  assert.deepEqual(
+    [moved.body.profile.dark_store_id, moved.body.profile.zone_id, moved.body.profile.dark_store],
+    [null, null, null],
+  );
+
+  // Same for a platform change.
+  await call('PUT', choose, { token: 'rider-a', body: { dark_store_id: 'demo-ds-mum-zepto-1' } });
+  const switched = await call('PATCH', me, { token: 'rider-a', body: { platform: 'blinkit' } });
+  assert.deepEqual([switched.body.profile.dark_store_id, switched.body.profile.zone_id], [null, null]);
 });

@@ -20,9 +20,9 @@ void main() {
     expect(find.textContaining('Placeholder'), findsNothing);
 
     for (final (label, pr) in [
-      ('Policy', 11),
-      ('Claims', 14),
-      ('Wallet', 16),
+      ('Policy', 13),
+      ('Claims', 16),
+      ('Wallet', 18),
     ]) {
       await tester.tap(
         find.descendant(
