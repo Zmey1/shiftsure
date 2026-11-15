@@ -1,20 +1,24 @@
 import express from 'express';
+import { darkStoresRouter } from './routes/dark-stores.js';
 import { healthRouter } from './routes/health.js';
 import { workersRouter } from './routes/workers.js';
 
 /**
  * Create the Express app. Does not listen on any port.
  *
- * `services` ({ verifyIdToken, auth, workers }) enables the authenticated API
- * routes. Without it only `/health` is served, which keeps the health check
- * free of any Firebase dependency.
+ * `services` ({ verifyIdToken, auth, workers, catalog }) enables the
+ * authenticated API routes. Without it only `/health` is served, which keeps
+ * the health check free of any Firebase dependency.
  */
 export function createApp(config, services) {
   const app = express();
   app.disable('x-powered-by');
 
   app.use(healthRouter(config));
-  if (services) app.use('/api/workers', workersRouter(services));
+  if (services) {
+    app.use('/api/workers', workersRouter(services));
+    app.use('/api/dark-stores', darkStoresRouter(services));
+  }
 
   app.use((_req, res) => {
     res.status(404).json({ error: 'not_found' });

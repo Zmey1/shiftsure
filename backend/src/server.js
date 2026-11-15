@@ -1,4 +1,6 @@
 import { createApp } from './app.js';
+import { createCatalog } from './catalog/catalog.js';
+import { DEMO_CATALOG } from './catalog/demo-catalog.js';
 import { loadConfig, loadEnvFileIfPresent } from './config.js';
 import { createFirebaseServices } from './firebase.js';
 import { createWorkerRepository } from './workers/repository.js';
@@ -13,7 +15,12 @@ try {
 }
 
 const { verifyIdToken, auth, db } = createFirebaseServices(config);
-const services = { verifyIdToken, auth, workers: createWorkerRepository(db) };
+const services = {
+  verifyIdToken,
+  auth,
+  workers: createWorkerRepository(db),
+  catalog: createCatalog(DEMO_CATALOG),
+};
 
 const server = createApp(config, services).listen(config.port, () => {
   console.log(`${config.serviceName} listening on port ${server.address().port} (${config.nodeEnv})`);

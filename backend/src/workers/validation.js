@@ -16,7 +16,7 @@ export const PROFILE_FIELDS = Object.freeze(['name', 'phone', 'city', 'platform'
 const NAME_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M} .'-]*$/u;
 const INDIAN_MOBILE = /^[6-9]\d{9}$/;
 
-function normalizeText(value) {
+export function normalizeText(value) {
   return value.normalize('NFC').trim().replace(/\s+/g, ' ');
 }
 

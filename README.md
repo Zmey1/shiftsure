@@ -23,10 +23,10 @@ Disruption events act as evidence for verification. They do not pay out on their
 
 | Area | Planned technology | Status |
 |---|---|---|
-| Rider app | Flutter (Android, iOS) | Scaffold **Implemented** (PR #6); sign-in **Implemented** (PR #7); worker profile setup/view/edit **In progress** (PR #10); other rider features **Planned** |
+| Rider app | Flutter (Android, iOS) | Scaffold **Implemented** (PR #6); sign-in **Implemented** (PR #7); worker profile setup/view/edit **Implemented** (PR #10); dark-store selection **In progress** (PR #11); other rider features **Planned** |
 | Admin dashboard | Flutter Web | Planned |
-| Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); token auth and role middleware **Implemented** (PR #4); worker profile API and rider-role onboarding **In progress** (PR #10); other features **Planned** |
-| Auth and database | Firebase Auth + Cloud Firestore | Deny-all Firestore client rules and emulator tests **Implemented** (PR #5); `workers` collection **In progress** (PR #10); other data models **Planned** |
+| Backend API | Node.js + Express | Scaffold **Implemented** (PR #3); token auth and role middleware **Implemented** (PR #4); worker profile API and rider-role onboarding **Implemented** (PR #10); dark-store catalog and assignment **In progress** (PR #11); other features **Planned** |
+| Auth and database | Firebase Auth + Cloud Firestore | Deny-all Firestore client rules and emulator tests **Implemented** (PR #5); `workers` collection **Implemented** (PR #10), dark-store assignment fields **In progress** (PR #11); other data models **Planned** |
 | AI service (pricing, risk scoring) | Python + FastAPI | Planned |
 | Fraud / graph analysis | Neo4j | Planned |
 
@@ -49,7 +49,7 @@ Only the backend and the rider app scaffold exist so far (see [Backend](#backend
 
 ### Backend scaffold (Implemented, PR #3) and auth middleware (Implemented, PR #4)
 
-A minimal Node.js + Express app in `backend/` (plain JavaScript, ESM). It serves the public `GET /health` and, since PR #10 (**In progress**), the authenticated worker profile API under `/api/workers/me` (see [Worker profiles](#worker-profiles-in-progress-pr-10)). PR #4 added Firebase Admin initialization and authentication/authorization middleware (**Implemented**). All other feature routes are **Planned** and do not exist yet.
+A minimal Node.js + Express app in `backend/` (plain JavaScript, ESM). It serves the public `GET /health` and, since PR #10 (**Implemented**), the authenticated worker profile API under `/api/workers/me` (see [Worker profiles](#worker-profiles-implemented-pr-10)), plus, since PR #11 (**In progress**), the dark-store catalog and assignment routes (see [Dark-store assignment](#dark-store-assignment-in-progress-pr-11)). PR #4 added Firebase Admin initialization and authentication/authorization middleware (**Implemented**). All other feature routes are **Planned** and do not exist yet.
 
 **Prerequisites:** Node.js 26 (Active LTS; see `backend/.nvmrc`) and npm.
 
@@ -80,14 +80,14 @@ Against a real (development) project, Firestore access and custom-claim writes n
 **Authentication and roles (Implemented, PR #4).** `authenticate` (`backend/src/middleware/auth.js`) verifies a Firebase ID token from `Authorization: Bearer <token>` and sets `req.user = { uid, role }`; `requireRole('admin')` etc. restricts a route. Failures return `401 {"error":"unauthenticated"}` or `403 {"error":"forbidden"}` with no further detail.
 
 - **Roles come only from Firebase custom claims.** The verified token's `role` claim must be `rider` or `admin`; anything else means no role (403 on role-guarded routes). Nothing the client sends (headers, body, query) is used for authorization. The old repo read the role from a Firestore `workers` document on every request and defaulted to `rider`; that is intentionally not carried over.
-- **Implications:** claims are refreshed only when the client's ID token refreshes (up to about an hour), so role changes lag. Immediate revocation needs `verifyIdToken(token, true)` (checks revocation) *in addition to* `revokeRefreshTokens`; `revokeRefreshTokens` alone does not invalidate existing ID tokens until they expire. Claims must be set by trusted server code or scripts via the Admin SDK (`setCustomUserClaims`). The rider role is assigned during profile creation (PR #10, **In progress**; see [Worker profiles](#worker-profiles-in-progress-pr-10)); admin bootstrap and Firestore-rule use of `request.auth.token.role` are **Planned**.
-- **Emulator coverage (PR #10):** `npm run test:emulator` (Java 21+, demo project `demo-shiftsure` only) verifies real Auth-emulator ID tokens, rider-claim assignment, and token refresh end to end. The hermetic `npm test` still injects a fake verifier.
+- **Implications:** claims are refreshed only when the client's ID token refreshes (up to about an hour), so role changes lag. Immediate revocation needs `verifyIdToken(token, true)` (checks revocation) *in addition to* `revokeRefreshTokens`; `revokeRefreshTokens` alone does not invalidate existing ID tokens until they expire. Claims must be set by trusted server code or scripts via the Admin SDK (`setCustomUserClaims`). The rider role is assigned during profile creation (PR #10, **Implemented**; see [Worker profiles](#worker-profiles-implemented-pr-10)); admin bootstrap and Firestore-rule use of `request.auth.token.role` are **Planned**.
+- **Emulator coverage (PR #10):** `npm run test:emulator` (Java 21+, demo project `demo-shiftsure` only) verifies real Auth-emulator ID tokens, rider-claim assignment, and token refresh end to end; since PR #11 also transactional dark-store assignment, including concurrent edits. The hermetic `npm test` still injects a fake verifier.
 
 **Tests:** `npm test` is hermetic: it needs no `.env`, Firebase emulators, network access, or credentials. HTTP tests bind to an ephemeral port on `127.0.0.1`. `npm run test:rules` and `npm run test:emulator` start local emulators (demo project only) and run in CI's `firestore-rules-tests` job.
 
 ### Rider app (scaffold Implemented, PR #6; sign-in Implemented, PR #7)
 
-A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. Home shows the rider's profile summary (PR #10, **In progress**). **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders. Home also has a **development diagnostic** card that calls `GET /health` once on load (and on Retry); it is not a rider feature.
+A Flutter app in `mobile/` (Android and iOS) with Material 3 theming (light and dark, following the system), bottom navigation between Home, Policy, Claims and Wallet, and a small HTTP client. Home shows the rider's profile summary (PR #10, **Implemented**) and their dark store, or a prompt to choose one (PR #11, **In progress**). **Everything else is Planned:** Policy, Claims and Wallet are labelled placeholders. Home also has a **development diagnostic** card that calls `GET /health` once on load (and on Retry); it is not a rider feature.
 
 **Prerequisites (toolchain upgraded in the `chore/upgrade-mobile-toolchain` PR #8, **Implemented**):** Flutter 3.47.9 (stable; Dart 3.13.7), JDK 17+, and the Android SDK with platform 36, build-tools 36.0.0 and NDK 28.2.13676358 (Gradle can download the NDK; accept licenses with `flutter doctor --android-licenses`). Android `minSdk` is 24 (Android 7.0+), up from 23. The iOS deployment target is 15.0 (raised from 12.0); iOS builds need macOS and Xcode and have **not** been verified.
 
@@ -135,7 +135,7 @@ adb reverse tcp:9099 tcp:9099 && adb reverse tcp:3000 tcp:3000
 cd mobile && flutter run --dart-define=USE_AUTH_EMULATOR=true --dart-define=AUTH_EMULATOR_HOST=127.0.0.1 --dart-define=API_BASE_URL=http://127.0.0.1:3000
 ```
 
-### Worker profiles (In progress, PR #10)
+### Worker profiles (Implemented, PR #10)
 
 Each rider has one profile at Firestore `workers/{firebaseUid}`, written only by the backend (Admin SDK). The app never reads Firestore directly; `firestore.rules` stays deny-all.
 
@@ -155,10 +155,27 @@ API (all require `Authorization: Bearer <Firebase ID token>`; the uid always com
 | `POST /api/workers/me` | no role yet, or `rider` | `201 {profile, token_refresh_required}`; `409 profile_exists`; `400 validation_failed` |
 | `PATCH /api/workers/me` | `rider` | `200 {profile}` with only the sent fields changed; `404`; `400` |
 
-Unknown fields (including `uid`, `role`, timestamps, `dark_store_id`, `zone_id`) are rejected with `400`. Admin accounts get `403`: they are not worker accounts.
+Unknown fields (including `uid`, `role`, timestamps, `dark_store_id`, `zone_id`) are rejected with `400`; the store is chosen through its own endpoint (below). Since PR #11, profile responses also include `dark_store_id`, `zone_id` (both `null` when unassigned) and a display-only `dark_store` summary (`{id, name, zone: {id, name}}` or `null`). Admin accounts get `403`: they are not worker accounts.
 
 **Rider-role onboarding.** On `POST`, after validating the body, the backend reads the user's current custom claims from Firebase Auth. If there is no role it sets `role: 'rider'` (merging any other claims), then creates the profile. An existing `admin` (or any other non-rider) role is never overwritten: the request gets `403` and nothing is written. The client cannot choose the role. Custom claims only appear in a newly minted ID token, so when `token_refresh_required` is true the app calls `getIdToken(forceRefresh: true)`.
 
 **Interrupted onboarding** recovers automatically. If the claim was set but the profile write failed, `GET` returns `404`, the app shows setup again, and the retried `POST` creates the profile without reassigning the role. If the app closed before refreshing its token, the next `GET` reports `token_refresh_required` (and re-checks the claim), and a `PATCH` rejected with `403` refreshes the token and retries once.
 
 **App.** After sign-in the app asks the backend for the profile. It shows a setup form if there is none, or the app shell if there is one (with retry and sign-out on load errors). The profile can be viewed from Home (**View profile** or the person icon) and edited; edits send only changed fields. No location permission is used.
+
+### Dark-store assignment (In progress, PR #11)
+
+Riders choose their dark store by hand (no GPS or location permission), from a backend-managed catalog. A dark store is the rider's future weekly insurance pool (PR #12, **Planned**); its zone is the area used for exposure and disruption coverage. Several stores can share a zone. Pools, policies and pricing are **not** part of this PR.
+
+> **Demonstration data only.** The catalog (`backend/src/catalog/demo-catalog.js`) is a small, fictional dataset: Bengaluru and Mumbai, four zones and eight stores, one of them inactive. Names such as "Demo Zepto Store BLR-1A" only mention a platform so that filtering can be tested. They are not real stores, addresses or delivery boundaries, and they are not affiliated with any platform. Riders in other cities (or on `other`) see an empty list.
+
+| Request | Who | Result |
+|---|---|---|
+| `GET /api/dark-stores` | `rider` | `200 {demo, platform, city, stores: [{id, name, zone: {id, name}}], available_cities}` for the rider's **saved** platform and city (query parameters are ignored); `404 profile_not_found` |
+| `PUT /api/workers/me/dark-store` | `rider` | Body exactly `{"dark_store_id": "..."}`. `200 {profile}`; `400 validation_failed` (missing, non-string or extra fields, including `zone_id`); `404 profile_not_found`; `422` with `store_not_found`, `store_unavailable` (inactive) or `store_mismatch` (other platform or city) |
+
+- **The backend validates everything.** In a Firestore transaction it reads the stored profile, checks that the store exists, is active, and matches the profile's platform and city, then saves `dark_store_id` and the store's `zone_id`. The client never sends a zone, and there is no default or fallback zone.
+- **Profile changes re-validate.** A `PATCH /api/workers/me` that changes `platform` or `city` re-checks the store in the same transaction. If the store no longer fits, both fields are removed and the response shows `dark_store: null`; the app then tells the rider and asks them to choose again. Other edits leave the store alone.
+- **City matching** ignores case and extra spaces ("  bengaluru " matches "Bengaluru"). Aliases such as "Bangalore" are **not** recognised yet.
+- **App.** Home shows the store and zone, or a **Choose your dark store** button. The profile screen has a Dark store row with Choose/Change. The selection screen labels the data as a demonstration. Its empty state and errors use the rider's own platform and city and the catalog cities that do have stores. Choosing a store is optional for now; policy purchase (PR #13) will require it.
+- **Tests:** `npm test` covers catalog integrity and the API (hermetic). `npm run test:emulator` covers real Firestore transactions, including concurrent profile edits and store assignments. `flutter test` covers the selection flow against a fake backend.

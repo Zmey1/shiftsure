@@ -5,6 +5,7 @@ import '../profile/profile_api.dart';
 import '../profile/worker_profile.dart';
 import '../widgets/backend_status_card.dart';
 import 'profile_screen.dart';
+import 'select_store_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({
@@ -36,9 +37,19 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _chooseStore(BuildContext context) async {
+    final updated = await Navigator.of(context).push<WorkerProfile>(
+      MaterialPageRoute(
+        builder: (_) => SelectStoreScreen(profile: profile, profiles: profiles),
+      ),
+    );
+    if (updated != null) onProfileChanged(updated);
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final store = profile.darkStore;
     return Scaffold(
       appBar: AppBar(
         title: const Text('ShiftSure'),
@@ -71,11 +82,27 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text('${profile.platform.label} · ${profile.city}'),
+                  if (store != null) ...[
+                    const SizedBox(height: 4),
+                    Text('${store.name} · Zone: ${store.zoneName}'),
+                  ],
                   const SizedBox(height: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => _openProfile(context),
-                    icon: const Icon(Icons.person_outline),
-                    label: const Text('View profile'),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      OutlinedButton.icon(
+                        onPressed: () => _openProfile(context),
+                        icon: const Icon(Icons.person_outline),
+                        label: const Text('View profile'),
+                      ),
+                      if (store == null)
+                        FilledButton.icon(
+                          onPressed: () => _chooseStore(context),
+                          icon: const Icon(Icons.storefront_outlined),
+                          label: const Text('Choose your dark store'),
+                        ),
+                    ],
                   ),
                 ],
               ),

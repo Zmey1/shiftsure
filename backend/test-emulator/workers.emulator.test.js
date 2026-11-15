@@ -1,10 +1,13 @@
 // Run via `npm run test:emulator` (Auth + Firestore emulators started by
 // firebase emulators:exec). Exercises the real Admin SDK paths that the
 // hermetic tests fake: Firestore create/update semantics, server timestamps,
-// custom-claim assignment, and ID-token refresh picking up the new claim.
+// custom-claim assignment, ID-token refresh picking up the new claim, and
+// transactional dark-store assignment (including concurrent edits).
 import { test, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApp } from '../src/app.js';
+import { createCatalog } from '../src/catalog/catalog.js';
+import { DEMO_CATALOG } from '../src/catalog/demo-catalog.js';
 import { loadConfig } from '../src/config.js';
 import { createFirebaseServices } from '../src/firebase.js';
 import {
@@ -20,6 +23,7 @@ const API_KEY = 'fake-api-key'; // the Auth emulator accepts any key
 
 let services;
 let repo;
+let catalog;
 let server;
 let baseUrl;
 
@@ -31,7 +35,8 @@ before(async () => {
 
   services = createFirebaseServices(config);
   repo = createWorkerRepository(services.db);
-  const app = createApp(config, { verifyIdToken: services.verifyIdToken, auth: services.auth, workers: repo });
+  catalog = createCatalog(DEMO_CATALOG);
+  const app = createApp(config, { verifyIdToken: services.verifyIdToken, auth: services.auth, workers: repo, catalog });
   await new Promise((resolve) => {
     server = app.listen(0, '127.0.0.1', resolve);
   });
@@ -80,8 +85,8 @@ async function refresh(refreshToken) {
   return r.id_token;
 }
 
-async function call(method, idToken, body) {
-  const res = await fetch(`${baseUrl}/api/workers/me`, {
+async function call(method, idToken, body, path = '/api/workers/me') {
+  const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers: {
       Authorization: `Bearer ${idToken}`,
@@ -154,4 +159,66 @@ test('existing claims are preserved and admins are never downgraded', async () =
   assert.equal((await call('POST', await refresh(admin.refreshToken), valid)).status, 403);
   assert.deepEqual((await services.auth.getUser(admin.uid)).customClaims, { role: 'admin' });
   assert.equal(await repo.get(admin.uid), null);
+});
+
+/** Sign up, create a profile, and return a token that carries the rider role. */
+async function onboardedRider(email, profile = valid) {
+  const { uid, idToken, refreshToken } = await signUp(email);
+  assert.equal((await call('POST', idToken, profile)).status, 201);
+  return { uid, token: await refresh(refreshToken) };
+}
+
+const storedKeys = async (uid) =>
+  Object.keys((await services.db.collection(WORKERS_COLLECTION).doc(uid).get()).data()).sort();
+
+test('dark store: assign through the API, then a city change clears it', async () => {
+  const { uid, token } = await onboardedRider('store@example.com');
+  const listed = await call('GET', token, undefined, '/api/dark-stores');
+  assert.equal(listed.status, 200);
+  assert.ok(listed.body.stores.some((s) => s.id === 'demo-ds-blr-zepto-1'));
+
+  const assigned = await call('PUT', token, { dark_store_id: 'demo-ds-blr-zepto-1' }, '/api/workers/me/dark-store');
+  assert.equal(assigned.status, 200);
+  assert.equal(assigned.body.profile.zone_id, 'demo-zone-blr-1');
+  assert.deepEqual(await storedKeys(uid), [
+    'city', 'created_at', 'dark_store_id', 'name', 'phone', 'platform', 'updated_at', 'zone_id',
+  ]);
+
+  const mismatch = await call('PUT', token, { dark_store_id: 'demo-ds-mum-zepto-1' }, '/api/workers/me/dark-store');
+  assert.deepEqual([mismatch.status, mismatch.body], [422, { error: 'store_mismatch' }]);
+  assert.equal((await repo.get(uid)).dark_store_id, 'demo-ds-blr-zepto-1');
+
+  const moved = await call('PATCH', token, { city: 'Mumbai' });
+  assert.equal(moved.status, 200);
+  assert.deepEqual([moved.body.profile.dark_store_id, moved.body.profile.zone_id], [null, null]);
+  // Cleared means the fields are removed, not set to a fallback.
+  assert.deepEqual(await storedKeys(uid), ['city', 'created_at', 'name', 'phone', 'platform', 'updated_at']);
+});
+
+test('dark store: concurrent profile edits and assignments never leave an incompatible store', async () => {
+  const { uid, token } = await onboardedRider('race@example.com');
+  const assign = (id) => call('PUT', token, { dark_store_id: id }, '/api/workers/me/dark-store');
+  const cities = ['Mumbai', 'Bengaluru'];
+
+  for (let round = 0; round < 10; round++) {
+    // Assign a store valid for the *current* city while the city is changed
+    // away from it (and, from round 5, also flip the platform) at the same time.
+    const before = await repo.get(uid);
+    const storeId = catalog.listStores(before)[0].id;
+    const next = cities[(cities.indexOf(before.city) + 1) % 2];
+    const edit = round < 5 ? { city: next } : { city: next, platform: round % 2 ? 'blinkit' : 'zepto' };
+    const [put, patch] = await Promise.all([assign(storeId), call('PATCH', token, edit)]);
+
+    assert.equal(patch.status, 200, `round ${round}`);
+    assert.ok([200, 422].includes(put.status), `round ${round}: PUT ${put.status}`);
+
+    const saved = await repo.get(uid);
+    if (saved.dark_store_id !== null) {
+      const check = catalog.checkAssignment(saved.dark_store_id, saved);
+      assert.equal(check.ok, true, `round ${round}: incompatible ${saved.dark_store_id} for ${saved.platform}/${saved.city}`);
+      assert.equal(saved.zone_id, check.zone_id, `round ${round}: zone does not match store`);
+    } else {
+      assert.equal(saved.zone_id, null, `round ${round}: zone without store`);
+    }
+  }
 });

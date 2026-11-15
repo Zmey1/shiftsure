@@ -1,6 +1,7 @@
 import '../api/api_client.dart';
 import '../api/api_exception.dart';
 import '../auth/auth_service.dart';
+import 'dark_store.dart';
 import 'worker_profile.dart';
 
 /// The signed-in worker's own profile (`/api/workers/me`).
@@ -17,6 +18,8 @@ class ProfileApi {
   final AuthService auth;
 
   static const path = '/api/workers/me';
+  static const storesPath = '/api/dark-stores';
+  static const darkStorePath = '/api/workers/me/dark-store';
 
   /// The current profile, or null if the worker has not set one up yet.
   Future<WorkerProfile?> fetchMine() async {
@@ -53,15 +56,44 @@ class ProfileApi {
   /// Editing requires the rider role in the ID token. If the token predates
   /// role assignment the backend answers 403; refresh once and retry.
   Future<WorkerProfile> update(Map<String, dynamic> changes) async {
-    Map<String, dynamic> body;
+    return _parse(await _asRider(() => api.patchJson(path, changes)));
+  }
+
+  /// The demo dark stores the backend offers for the saved platform and city.
+  Future<DarkStoreListing> fetchStoreOptions() async {
+    final body = await _asRider(() => api.getJson(storesPath));
     try {
-      body = await api.patchJson(path, changes);
+      return DarkStoreListing.fromJson(body);
+    } on FormatException {
+      throw const ApiException(
+        ApiErrorKind.invalidResponse,
+        'Unexpected response from server.',
+      );
+    }
+  }
+
+  /// Chooses dark store [storeId]. The backend checks it against the saved
+  /// profile and resolves its zone; a rejected choice throws [ApiException]
+  /// with code `store_not_found`, `store_unavailable`, or `store_mismatch`.
+  Future<WorkerProfile> assignDarkStore(String storeId) async {
+    final body = await _asRider(
+      () => api.putJson(darkStorePath, {'dark_store_id': storeId}),
+    );
+    return _parse(body);
+  }
+
+  /// Runs a rider-only request; on 403 (token predates the rider role)
+  /// refreshes the token once and retries, like [update].
+  Future<Map<String, dynamic>> _asRider(
+    Future<Map<String, dynamic>> Function() request,
+  ) async {
+    try {
+      return await request();
     } on ApiException catch (e) {
       if (e.statusCode != 403 || e.code != 'forbidden') rethrow;
       await auth.getIdToken(forceRefresh: true);
-      body = await api.patchJson(path, changes);
+      return request();
     }
-    return _parse(body);
   }
 
   Future<void> _refreshTokenIfRequired(Map<String, dynamic> body) async {

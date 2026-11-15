@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shiftsure_rider/profile/dark_store.dart';
 import 'package:shiftsure_rider/profile/profile_validators.dart';
 import 'package:shiftsure_rider/profile/worker_profile.dart';
 
@@ -36,6 +37,67 @@ void main() {
         'phone': '9876543210',
         'city': 'Pune',
         'platform': 'uber',
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('dark store is optional on a profile and validated when present', () {
+    const base = {
+      'uid': 'u1',
+      'name': 'Asha',
+      'phone': '9876543210',
+      'city': 'Pune',
+      'platform': 'zepto',
+    };
+    // PR #10 responses have no dark_store at all.
+    expect(WorkerProfile.fromJson(base).darkStore, isNull);
+    expect(
+      WorkerProfile.fromJson({...base, 'dark_store': null}).darkStore,
+      isNull,
+    );
+    final p = WorkerProfile.fromJson({
+      ...base,
+      'dark_store': {
+        'id': 's1',
+        'name': 'Store',
+        'zone': {'id': 'z1', 'name': 'Zone'},
+      },
+    });
+    expect(p.darkStore!.zoneId, 'z1');
+    expect(p.darkStore!.zoneName, 'Zone');
+    expect(
+      () => WorkerProfile.fromJson({
+        ...base,
+        'dark_store': {'id': 's1', 'name': 'Store'},
+      }),
+      throwsFormatException,
+    );
+  });
+
+  test('dark-store listing parses and rejects malformed data', () {
+    final listing = DarkStoreListing.fromJson({
+      'demo': true,
+      'platform': 'blinkit',
+      'city': 'Pune',
+      'stores': [
+        {
+          'id': 's1',
+          'name': 'Store',
+          'zone': {'id': 'z1', 'name': 'Zone'},
+        },
+      ],
+      'available_cities': ['Pune'],
+    });
+    expect(listing.platform, DeliveryPlatform.blinkit);
+    expect(listing.stores.single.id, 's1');
+    expect(listing.demo, isTrue);
+    expect(
+      () => DarkStoreListing.fromJson({
+        'platform': 'blinkit',
+        'city': 'Pune',
+        'stores': [],
+        'available_cities': [1],
       }),
       throwsFormatException,
     );

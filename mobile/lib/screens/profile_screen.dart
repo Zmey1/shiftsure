@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../profile/profile_api.dart';
 import '../profile/worker_profile.dart';
 import 'edit_profile_screen.dart';
+import 'select_store_screen.dart';
 
-/// Read-only view of the rider's saved profile, with an Edit action.
+/// Read-only view of the rider's saved profile, with Edit and dark-store
+/// actions.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
@@ -34,12 +36,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (updated == null || !mounted) return;
+    final cleared = _profile.darkStore != null && updated.darkStore == null;
+    _apply(updated);
+    if (cleared) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Your dark store no longer matches ${updated.platform.label} in ${updated.city}, so '
+            'it was removed. Choose a new one.',
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _chooseStore() async {
+    final updated = await Navigator.of(context).push<WorkerProfile>(
+      MaterialPageRoute(
+        builder: (_) =>
+            SelectStoreScreen(profile: _profile, profiles: widget.profiles),
+      ),
+    );
+    if (updated == null || !mounted) return;
+    _apply(updated);
+  }
+
+  void _apply(WorkerProfile updated) {
     setState(() => _profile = updated);
     widget.onChanged(updated);
   }
 
   @override
   Widget build(BuildContext context) {
+    final store = _profile.darkStore;
     return Scaffold(
       appBar: AppBar(
         title: const Text('Your profile'),
@@ -72,6 +101,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.storefront_outlined,
             label: 'Delivery platform',
             value: _profile.platform.label,
+          ),
+          ListTile(
+            leading: const Icon(Icons.store_mall_directory_outlined),
+            title: const Text('Dark store'),
+            subtitle: Text(
+              store == null
+                  ? 'Not selected'
+                  : '${store.name} · Zone: ${store.zoneName}',
+            ),
+            trailing: TextButton(
+              onPressed: _chooseStore,
+              child: Text(store == null ? 'Choose' : 'Change'),
+            ),
           ),
         ],
       ),

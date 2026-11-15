@@ -1,3 +1,5 @@
+import 'dark_store.dart';
+
 /// Delivery platforms the backend accepts. [wireValue] is what is stored and
 /// sent; [label] is for display only.
 enum DeliveryPlatform {
@@ -57,6 +59,7 @@ class WorkerProfile {
     required this.phone,
     required this.city,
     required this.platform,
+    this.darkStore,
     this.createdAt,
     this.updatedAt,
   });
@@ -66,6 +69,11 @@ class WorkerProfile {
   final String phone;
   final String city;
   final DeliveryPlatform platform;
+
+  /// The assigned dark store and its zone, or null if none is chosen yet
+  /// (or the backend cleared it after a platform or city change).
+  final DarkStoreSummary? darkStore;
+
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -89,10 +97,15 @@ class WorkerProfile {
       phone: phone,
       city: city,
       platform: platform,
+      darkStore: _store(json['dark_store']),
       createdAt: _date(json['created_at']),
       updatedAt: _date(json['updated_at']),
     );
   }
+
+  /// Missing or null means unassigned (also for PR #10 responses).
+  static DarkStoreSummary? _store(Object? value) =>
+      value == null ? null : DarkStoreSummary.fromJson(value);
 
   static DateTime? _date(Object? value) =>
       value is String ? DateTime.tryParse(value) : null;

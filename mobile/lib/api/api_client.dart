@@ -43,6 +43,12 @@ class ApiClient {
     Map<String, dynamic> body,
   ) => _send('PATCH', path, body: body);
 
+  /// PUTs [body] as JSON. Same return and error behaviour as [getJson].
+  Future<Map<String, dynamic>> putJson(
+    String path,
+    Map<String, dynamic> body,
+  ) => _send('PUT', path, body: body);
+
   Future<Map<String, dynamic>> _send(
     String method,
     String path, {
